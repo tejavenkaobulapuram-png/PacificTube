@@ -1,0 +1,51 @@
+# Azure Container Apps Deployment Configuration
+# This file documents the deployment settings. 
+# Use Azure CLI commands to deploy (see deploy.ps1)
+
+apiVersion: apps/v1
+kind: ContainerApp
+metadata:
+  name: pacifictube-app
+spec:
+  configuration:
+    ingress:
+      external: true
+      targetPort: 5000
+      transport: http
+      allowInsecure: false
+  
+  template:
+    containers:
+    - name: pacifictube
+      image: <REGISTRY>/pacifictube:latest  # Replace with your registry
+      resources:
+        cpu: 1.0
+        memory: 2Gi
+      env:
+      - name: USE_CLOUD_STORAGE
+        value: "True"
+      - name: DEBUG
+        value: "False"
+      - name: PORT
+        value: "5000"
+      - name: AZURE_STORAGE_ACCOUNT_NAME
+        value: "pacifictubestorage"
+      - name: AZURE_STORAGE_SAS_TOKEN
+        secretRef: sas-token-blob
+      - name: AZURE_TABLE_SAS_TOKEN
+        secretRef: sas-token-table
+      
+    scale:
+      minReplicas: 1
+      maxReplicas: 10
+      rules:
+      - name: http-rule
+        http:
+          metadata:
+            concurrentRequests: 100
+
+  secrets:
+  - name: sas-token-blob
+    value: "<YOUR_BLOB_SAS_TOKEN>"
+  - name: sas-token-table
+    value: "<YOUR_TABLE_SAS_TOKEN>"

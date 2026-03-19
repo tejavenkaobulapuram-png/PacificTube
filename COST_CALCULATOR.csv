@@ -1,0 +1,109 @@
+Pacific Tube - Cost Calculator
+Date: March 19 2026
+Storage Account: pacifictubestorage
+Region: Japan East
+
+STORAGE COSTS (¥2.43 per GB per month)
+Video Count,Total Size (GB),Monthly Cost (¥),Annual Cost (¥)
+7,10,24.30,291.60
+20,30,72.90,874.80
+50,75,182.25,2187.00
+100,150,364.50,4374.00
+200,300,729.00,8748.00
+
+EGRESS COSTS (¥10.81 per GB after 100 GB free)
+Total Egress (GB),Free Tier (GB),Billable (GB),Monthly Cost (¥)
+50,50,0,0.00
+100,100,0,0.00
+150,100,50,540.50
+300,100,200,2162.00
+500,100,400,4324.00
+1000,100,900,9729.00
+2000,100,1900,20539.00
+3000,100,2900,31349.00
+
+USAGE SCENARIOS
+Scenario,Employees,Videos/User/Month,Video Size (GB),Total Views,Egress (GB),Storage Cost (¥),Egress Cost (¥),Total Cost (¥)
+Light,15,2,1.5,30,45,24,0,24
+Small,30,3,1.5,90,135,24,378,402
+Medium,50,5,1.5,250,375,24,2973,2997
+Large,100,8,1.5,800,1200,24,11891,11915
+Very Large,200,10,1.5,2000,3000,24,31349,31373
+
+COST PER VIDEO (1.5 GB, 1 hour)
+Views per Month,Total Egress (GB),Billable Egress (GB),Egress Cost (¥),Storage Cost (¥),Total Cost (¥),Cost per View (¥)
+10,15,0,0.00,3.65,3.65,0.37
+50,75,0,0.00,3.65,3.65,0.07
+67,100.5,0.5,5.41,3.65,9.06,0.14
+100,150,50,540.50,3.65,544.15,5.44
+200,300,200,2162.00,3.65,2165.65,10.83
+500,750,650,7026.50,3.65,7030.15,14.06
+1000,1500,1400,15134.00,3.65,15137.65,15.14
+
+CONCURRENT USERS TEST
+Concurrent Users,Bandwidth (Gbps),Performance,Cost Impact
+1,0.01,Excellent,1x
+10,0.1,Excellent,10x
+50,0.5,Excellent,50x
+100,1,Very Good,100x
+500,5,Good,500x
+1000,10,Acceptable,1000x
+
+MONTHLY BUDGET RECOMMENDATIONS
+Budget Level,Monthly Budget (¥),Storage Capacity (GB),Egress Capacity (GB),Suitable Video Views,Team Size
+Conservative,5000,75,450,300,20-30
+Moderate,10000,100,900,600,50-80
+Growth,20000,150,1850,1200,100-150
+Enterprise,50000,200,4600,3000,200+
+
+COST OPTIMIZATION
+Strategy,Impact,Cost Reduction,Implementation
+720p instead of 1080p,50% smaller files,50%,Immediate
+Stay under 100 GB,Eliminate egress cost,100%,Immediate
+H.265 compression,25% smaller files,25%,1 week
+Azure CDN,30% egress reduction,30%,1 month
+
+12-MONTH PROJECTION (Conservative)
+Month,Storage (GB),Egress (GB),Storage Cost (¥),Egress Cost (¥),Total Cost (¥),Cumulative (¥)
+1,10,50,24,0,24,24
+2,12,60,29,0,29,53
+3,15,80,36,0,36,89
+4,18,85,44,0,44,133
+5,22,90,53,0,53,186
+6,25,95,61,0,61,247
+7,28,110,68,108,176,423
+8,30,130,73,324,397,820
+9,35,150,85,541,626,1446
+10,40,170,97,757,854,2300
+11,45,185,109,919,1028,3328
+12,50,200,122,1081,1203,4531
+
+12-MONTH PROJECTION (Moderate Growth)
+Month,Storage (GB),Egress (GB),Storage Cost (¥),Egress Cost (¥),Total Cost (¥),Cumulative (¥)
+1,10,100,24,0,24,24
+2,15,150,36,541,577,601
+3,20,250,49,1622,1671,2272
+4,25,300,61,2162,2223,4495
+5,30,350,73,2703,2776,7271
+6,40,400,97,3243,3340,10611
+7,50,450,122,3784,3906,14517
+8,55,500,134,4324,4458,18975
+9,60,600,146,5405,5551,24526
+10,70,700,170,6486,6656,31182
+11,75,750,182,7027,7209,38391
+12,80,800,194,7567,7761,46152
+
+COMPARISON WITH ALTERNATIVES
+Solution,Setup Cost (¥),Monthly Cost (¥),Annual Cost (¥),Concurrent Users,Pros,Cons
+Azure Blob,0,25-20000,300-240000,Unlimited,Scalable secure,Egress costs
+SharePoint,0,0,0,500,Free with M365,Limited features
+AWS S3,0,30-25000,360-300000,Unlimited,Similar to Azure,Complex pricing
+YouTube Private,0,0,0,Unlimited,Free unlimited,Google account required
+On-Premise,500000,10000,620000,50-200,Full control,High upfront cost
+
+RISK ANALYSIS
+Risk Type,Probability,Impact,Max Cost (¥),Mitigation
+Unexpected spike,Low,Medium,50000,Cost alerts
+SAS token leak,Very Low,High,100000+,Regular rotation
+Over-uploading,Medium,Low,30000,Upload policy
+User misuse,Low,Low,20000,Training + monitoring

@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Local data files
+views.json
+thumbnails/*.jpg
+thumbnails/*.png
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+COST_ANALYSIS_REPORT.md
+COST_CALCULATOR.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
