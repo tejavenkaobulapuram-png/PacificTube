@@ -23,6 +23,9 @@ views.json
 # Generated thumbnails
 thumbnails/
 
+# FFmpeg portable installation (binary files)
+ffmpeg/
+
 # IDE
 .vscode/
 .idea/

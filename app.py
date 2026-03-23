@@ -119,6 +119,63 @@ class VideoService:
                 current[part]['video_count'] += 1
                 current = current[part]['children']
     
+    def get_subtitles(self, video_id):
+        """Get available subtitle files for a video
+        
+        Subtitle naming convention:
+        - video.mp4 → video.ja.vtt (Japanese)
+        - video.mp4 → video.en.vtt (English)
+        - video.mp4 → video.zh.vtt (Chinese)
+        """
+        subtitles = []
+        
+        # Language mapping (ISO 639-1 code → display name)
+        language_names = {
+            'ja': '日本語',
+            'en': 'English',
+            'zh': '中文',
+            'ko': '한국어',
+            'es': 'Español',
+            'fr': 'Français',
+            'de': 'Deutsch',
+            'pt': 'Português',
+            'ru': 'Русский',
+            'ar': 'العربية'
+        }
+        
+        try:
+            # Remove file extension from video_id
+            video_base = video_id.rsplit('.', 1)[0] if '.' in video_id else video_id
+            
+            # List all blobs with the same base name
+            folder_path = video_id.rsplit('/', 1)[0] if '/' in video_id else ''
+            prefix = f"{folder_path}/" if folder_path else ""
+            
+            for blob in self.container_client.list_blobs(name_starts_with=prefix):
+                # Check if it's a subtitle file for this video
+                if blob.name.lower().endswith('.vtt') and blob.name.startswith(video_base):
+                    # Extract language code from filename
+                    # Format: video.ja.vtt, video.en.vtt
+                    parts = blob.name.rsplit('.', 2)
+                    if len(parts) == 3 and parts[1] in language_names:
+                        lang_code = parts[1]
+                        subtitle_url = f"{config.CONTAINER_URL}/{quote(blob.name)}?{config.SAS_TOKEN}"
+                        
+                        subtitles.append({
+                            'lang': lang_code,
+                            'label': language_names[lang_code],
+                            'url': subtitle_url,
+                            'file': blob.name
+                        })
+            
+            # Sort by language code
+            subtitles.sort(key=lambda x: x['lang'])
+            
+        except Exception as e:
+            print(f"Error fetching subtitles for {video_id}: {e}")
+        
+        return subtitles
+    
     def _folders_to_list(self, folders_dict):
         """Convert folder dict to list format"""
         result = []
@@ -203,6 +260,23 @@ def get_folders():
         return jsonify({
             'success': True,
             'folders': folders
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/subtitles/<path:video_id>')
+def get_subtitles(video_id):
+    """API endpoint to get available subtitles for a video"""
+    try:
+        subtitles = video_service.get_subtitles(video_id)
+        return jsonify({
+            'success': True,
+            'subtitles': subtitles,
+            'count': len(subtitles)
         })
     except Exception as e:
         return jsonify({
@@ -500,29 +574,66 @@ def add_comment(video_id):
 
 @app.route('/api/download/<path:video_id>')
 def download_video(video_id):
-    """Get download URL for a video file with proper download disposition"""
+    """Stream video file from blob storage for download (no SAS token exposed)"""
     try:
         # Extract filename from video_id
         filename = video_id.split('/')[-1] if '/' in video_id else video_id
         
-        # Construct Azure Blob Storage URL with SAS token
-        # Add response-content-disposition parameter to force download
-        base_url = f"{config.CONTAINER_URL}/{quote(video_id)}"
-        download_disposition = f"attachment; filename=\"{filename}\""
+        # Get blob client for the video
+        blob_client = video_service.container_client.get_blob_client(video_id)
         
-        # Append the response-content-disposition parameter to the URL
-        # This tells Azure Blob Storage to send the Content-Disposition header
-        download_url = f"{base_url}?{config.SAS_TOKEN}&response-content-disposition={quote(download_disposition)}"
+        # Get blob properties to check if it exists and get size
+        try:
+            blob_props = blob_client.get_blob_properties()
+            file_size = blob_props.size
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Video not found: {str(e)}'}), 404
         
-        # Return the URL as JSON
-        return jsonify({
-            'success': True,
-            'download_url': download_url,
-            'filename': filename
-        })
+        # Stream the blob content
+        def generate():
+            """Generator function to stream blob data in chunks"""
+            try:
+                # Download blob in chunks (10 MB at a time)
+                chunk_size = 10 * 1024 * 1024  # 10 MB
+                stream = blob_client.download_blob()
+                
+                for chunk in stream.chunks():
+                    yield chunk
+                    
+            except Exception as e:
+                print(f"❌ Error streaming blob: {str(e)}")
+                raise
+        
+        # Encode filename for Content-Disposition header (RFC 5987)
+        # This handles Japanese characters and other non-ASCII characters
+        from urllib.parse import quote
+        
+        # ASCII fallback filename (for old browsers)
+        ascii_filename = filename.encode('ascii', 'ignore').decode('ascii') or 'video.mp4'
+        
+        # RFC 5987 encoded filename (for modern browsers with UTF-8 support)
+        encoded_filename = quote(filename)
+        
+        # Create Content-Disposition header with both ASCII and UTF-8 versions
+        content_disposition = f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{encoded_filename}"
+        
+        # Create streaming response with proper headers
+        response = Response(
+            generate(),
+            mimetype='video/mp4',
+            headers={
+                'Content-Disposition': content_disposition,
+                'Content-Length': str(file_size),
+                'Content-Type': 'video/mp4',
+                'Cache-Control': 'no-cache',
+                'X-Content-Type-Options': 'nosniff'
+            }
+        )
+        
+        return response
+        
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-    except Exception as e:
+        print(f"❌ Download error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

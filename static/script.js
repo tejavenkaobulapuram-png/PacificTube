@@ -306,12 +306,31 @@ function openModal(video) {
 
     // Store current video ID for engagement actions
     window.currentVideoId = video.id;
+    
+    // Reset engagement button states (prevent stuck locks)
+    isLikeProcessing = false;
+    isDislikeProcessing = false;
+    const likeBtn = document.getElementById('likeBtn');
+    const dislikeBtn = document.getElementById('dislikeBtn');
+    if (likeBtn) {
+        likeBtn.disabled = false;
+        likeBtn.style.pointerEvents = '';
+        likeBtn.style.opacity = '';
+    }
+    if (dislikeBtn) {
+        dislikeBtn.disabled = false;
+        dislikeBtn.style.pointerEvents = '';
+        dislikeBtn.style.opacity = '';
+    }
 
     // Increment view count
     incrementViewCount(video.id, video.name);
 
     // Load engagement data (likes, dislikes, comments)
     loadEngagement(video.id);
+    
+    // Load subtitles for this video
+    loadSubtitles(video.id);
 
     // Close on background click
     modal.onclick = (e) => {
@@ -353,6 +372,131 @@ function closeModal() {
     modal.style.display = 'none';
     player.pause();
     player.src = '';
+    
+    // Remove all subtitle tracks
+    const tracks = player.querySelectorAll('track');
+    tracks.forEach(track => track.remove());
+}
+
+// Global variable to store available subtitles
+window.availableSubtitles = [];
+window.currentSubtitleIndex = -1;
+
+// Load subtitles for a video
+async function loadSubtitles(videoId) {
+    const player = document.getElementById('videoPlayer');
+    const ccButton = document.getElementById('ccButton');
+    const ccBadge = document.getElementById('ccBadge');
+    const subtitleOptions = document.getElementById('subtitleOptions');
+    
+    try {
+        // Remove existing tracks
+        const existingTracks = player.querySelectorAll('track');
+        existingTracks.forEach(track => track.remove());
+        
+        // Reset global state
+        window.availableSubtitles = [];
+        window.currentSubtitleIndex = -1;
+        
+        // Hide CC button initially
+        if (ccButton) ccButton.style.display = 'none';
+        
+        // Fetch available subtitles
+        const response = await fetch(`/api/subtitles/${encodeURIComponent(videoId)}`);
+        if (!response.ok) {
+            console.log('No subtitles available for this video');
+            return;
+        }
+        
+        const data = await response.json();
+        if (!data.success || !data.subtitles || data.subtitles.length === 0) {
+            console.log('No subtitles found');
+            return;
+        }
+        
+        console.log(`📝 Found ${data.subtitles.length} subtitle(s):`, data.subtitles);
+        
+        // Store available subtitles
+        window.availableSubtitles = data.subtitles;
+        
+        // Show CC button
+        if (ccButton) {
+            ccButton.style.display = 'flex';
+            ccButton.classList.remove('active');
+        }
+        
+        // Build subtitle selector options
+        subtitleOptions.innerHTML = '';
+        data.subtitles.forEach((subtitle, index) => {
+            const option = document.createElement('div');
+            option.className = 'subtitle-option';
+            option.textContent = subtitle.label;
+            option.onclick = () => selectSubtitle(index);
+            subtitleOptions.appendChild(option);
+        });
+        
+        // Add subtitle tracks to video player
+        data.subtitles.forEach((subtitle, index) => {
+            const track = document.createElement('track');
+            track.kind = 'subtitles';
+            track.label = subtitle.label;
+            track.srclang = subtitle.lang;
+            track.src = subtitle.url;
+            track.id = `subtitle-track-${index}`;
+            
+            player.appendChild(track);
+        });
+        
+        // Auto-enable first subtitle
+        if (data.subtitles.length > 0) {
+            selectSubtitle(0);
+        }
+        
+    } catch (error) {
+        console.error('Error loading subtitles:', error);
+    }
+}
+
+// Toggle subtitle selector visibility
+function toggleSubtitles() {
+    const selector = document.getElementById('subtitleSelector');
+    if (selector) {
+        selector.style.display = selector.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Select a subtitle track
+function selectSubtitle(index) {
+    const player = document.getElementById('videoPlayer');
+    const ccButton = document.getElementById('ccButton');
+    const ccBadge = document.getElementById('ccBadge');
+    const selector = document.getElementById('subtitleSelector');
+    
+    // Hide selector
+    if (selector) selector.style.display = 'none';
+    
+    if (!player || !player.textTracks) return;
+    
+    // Disable all tracks
+    for (let i = 0; i < player.textTracks.length; i++) {
+        player.textTracks[i].mode = 'hidden';
+    }
+    
+    if (index === null || index < 0) {
+        // Turn off subtitles
+        window.currentSubtitleIndex = -1;
+        if (ccButton) ccButton.classList.remove('active');
+        console.log('Subtitles OFF');
+    } else {
+        // Enable selected track
+        if (player.textTracks[index]) {
+            player.textTracks[index].mode = 'showing';
+            window.currentSubtitleIndex = index;
+            if (ccButton) ccButton.classList.add('active');
+            const langName = window.availableSubtitles[index]?.label || 'Subtitles';
+            console.log(`Subtitles ON: ${langName}`);
+        }
+    }
 }
 
 // Setup search listener
@@ -502,8 +646,23 @@ async function loadComments(videoId) {
 }
 
 // Handle like button click
+let isLikeProcessing = false;
 async function handleLike() {
     if (!window.currentVideoId) return;
+    
+    const likeBtn = document.getElementById('likeBtn');
+    
+    // Prevent multiple simultaneous requests (fixes race condition)
+    if (isLikeProcessing || likeBtn.disabled) {
+        console.log('⏳ Like request already in progress, ignoring click');
+        return;
+    }
+    
+    // Lock and disable button
+    isLikeProcessing = true;
+    likeBtn.disabled = true;
+    likeBtn.style.pointerEvents = 'none';
+    likeBtn.style.opacity = '0.5';
     
     try {
         const response = await fetch(`/api/like/${encodeURIComponent(window.currentVideoId)}`, {
@@ -516,13 +675,13 @@ async function handleLike() {
         }
         
         const data = await response.json();
+        console.log('Like response:', data); // Debug log
         
         // Update counts
         document.getElementById('likeCount').textContent = data.likes || 0;
         document.getElementById('dislikeCount').textContent = data.dislikes || 0;
         
         // Update active states
-        const likeBtn = document.getElementById('likeBtn');
         const dislikeBtn = document.getElementById('dislikeBtn');
         
         likeBtn.classList.remove('active');
@@ -531,14 +690,39 @@ async function handleLike() {
         if (data.action === 'liked') {
             likeBtn.classList.add('active');
         }
+        
+        // Small delay to prevent accidental double-clicks
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
     } catch (error) {
         console.error('Error toggling like:', error);
+    } finally {
+        // Always re-enable the button
+        likeBtn.disabled = false;
+        likeBtn.style.pointerEvents = '';
+        likeBtn.style.opacity = '';
+        isLikeProcessing = false;
     }
 }
 
 // Handle dislike button click
+let isDislikeProcessing = false;
 async function handleDislike() {
     if (!window.currentVideoId) return;
+    
+    const dislikeBtn = document.getElementById('dislikeBtn');
+    
+    // Prevent multiple simultaneous requests (fixes race condition)
+    if (isDislikeProcessing || dislikeBtn.disabled) {
+        console.log('⏳ Dislike request already in progress, ignoring click');
+        return;
+    }
+    
+    // Lock and disable button
+    isDislikeProcessing = true;
+    dislikeBtn.disabled = true;
+    dislikeBtn.style.pointerEvents = 'none';
+    dislikeBtn.style.opacity = '0.5';
     
     try {
         const response = await fetch(`/api/dislike/${encodeURIComponent(window.currentVideoId)}`, {
@@ -551,6 +735,7 @@ async function handleDislike() {
         }
         
         const data = await response.json();
+        console.log('Dislike response:', data); // Debug log
         
         // Update counts
         document.getElementById('likeCount').textContent = data.likes || 0;
@@ -558,7 +743,6 @@ async function handleDislike() {
         
         // Update active states
         const likeBtn = document.getElementById('likeBtn');
-        const dislikeBtn = document.getElementById('dislikeBtn');
         
         likeBtn.classList.remove('active');
         dislikeBtn.classList.remove('active');
@@ -566,8 +750,18 @@ async function handleDislike() {
         if (data.action === 'disliked') {
             dislikeBtn.classList.add('active');
         }
+        
+        // Small delay to prevent accidental double-clicks
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
     } catch (error) {
         console.error('Error toggling dislike:', error);
+    } finally {
+        // Always re-enable the button
+        dislikeBtn.disabled = false;
+        dislikeBtn.style.pointerEvents = '';
+        dislikeBtn.style.opacity = '';
+        isDislikeProcessing = false;
     }
 }
 
@@ -703,28 +897,24 @@ async function handleDownload() {
     try {
         // Show downloading message
         if (downloadBtn) {
-            downloadBtn.innerHTML = '<span class="btn-icon">⏳</span><span>Starting download...</span>';
+            downloadBtn.innerHTML = '<span class="btn-icon">⏳</span><span>Downloading...</span>';
             downloadBtn.style.background = '#065fd4';
         }
         
-        // Get the download URL from the server
-        const response = await fetch(`/api/download/${encodeURIComponent(window.currentVideoId)}`);
-        if (!response.ok) {
-            throw new Error('Failed to get download URL');
-        }
+        // Create download URL (Flask will stream from blob storage)
+        const downloadUrl = `/api/download/${encodeURIComponent(window.currentVideoId)}`;
         
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.error || 'Failed to get download URL');
-        }
-        
-        // Directly navigate to the download URL
-        // Azure Blob Storage will handle the download because of response-content-disposition parameter
-        window.location.href = data.download_url;
+        // Create a temporary link element and click it to trigger download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         
         // Show success message
         if (downloadBtn) {
-            downloadBtn.innerHTML = '<span class="btn-icon">✓</span><span>Downloading...</span>';
+            downloadBtn.innerHTML = '<span class="btn-icon">✓</span><span>Download started!</span>';
             
             setTimeout(() => {
                 downloadBtn.innerHTML = originalText;

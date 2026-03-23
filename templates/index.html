@@ -93,7 +93,21 @@
                 </button>
             </div>
             <div class="video-modal-player">
-                <video id="videoPlayer" controls autoplay></video>
+                <video id="videoPlayer" controls autoplay crossorigin="anonymous"></video>
+                <!-- Custom CC Button -->
+                <div class="subtitle-controls">
+                    <button class="cc-button" id="ccButton" onclick="toggleSubtitles()" title="Subtitles">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/>
+                        </svg>
+                        <span class="cc-badge" id="ccBadge">CC</span>
+                    </button>
+                    <!-- Subtitle selector (hidden by default) -->
+                    <div class="subtitle-selector" id="subtitleSelector" style="display: none;">
+                        <div class="subtitle-option" onclick="selectSubtitle(null)">Off</div>
+                        <div id="subtitleOptions"></div>
+                    </div>
+                </div>
             </div>
             <div class="video-modal-info">
                 <div class="info-row">
@@ -162,6 +176,6 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=20260323-6"></script>
 </body>
 </html>

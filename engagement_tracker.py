@@ -3,10 +3,12 @@ Engagement tracking service using Azure Table Storage
 Handles likes, dislikes, and comments for videos
 """
 
-from azure.data.tables import TableServiceClient, TableEntity
+from azure.data.tables import TableServiceClient, TableEntity, UpdateMode
 from azure.core.credentials import AzureSasCredential
+from azure.core import MatchConditions
 from datetime import datetime, timezone
 import uuid
+import time
 
 
 class EngagementTracker:
@@ -51,32 +53,66 @@ class EngagementTracker:
         user_key = self._sanitize_key(user_id)
         row_key = f"{video_key}_{user_key}"
         
-        try:
-            # Check if user already liked/disliked
-            entity = self.likes_table.get_entity(partition_key="likes", row_key=row_key)
-            
-            if entity.get('like_type') == 'like':
-                # Already liked, remove like
-                self.likes_table.delete_entity(partition_key="likes", row_key=row_key)
-                action = 'removed_like'
-            else:
-                # Was dislike, change to like
-                entity['like_type'] = 'like'
-                entity['timestamp'] = datetime.now(timezone.utc).isoformat()
-                self.likes_table.update_entity(entity)
-                action = 'liked'
-        except Exception as e:
-            # No existing entity, create new like
-            entity = {
-                'PartitionKey': 'likes',
-                'RowKey': row_key,
-                'video_id': video_id,
-                'user_id': user_id,
-                'like_type': 'like',
-                'timestamp': datetime.now(timezone.utc).isoformat()
-            }
-            self.likes_table.create_entity(entity)
-            action = 'liked'
+        # Retry logic for race condition handling
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Check if user already liked/disliked
+                entity = self.likes_table.get_entity(partition_key="likes", row_key=row_key)
+                
+                if entity.get('like_type') == 'like':
+                    # Already liked, remove like (use ETag for concurrency)
+                    self.likes_table.delete_entity(
+                        partition_key="likes", 
+                        row_key=row_key,
+                        etag=entity.metadata['etag'],
+                        match_condition=MatchConditions.IfNotModified
+                    )
+                    action = 'removed_like'
+                else:
+                    # Was dislike, change to like (use ETag for concurrency)
+                    entity['like_type'] = 'like'
+                    entity['timestamp'] = datetime.now(timezone.utc).isoformat()
+                    self.likes_table.update_entity(
+                        entity,
+                        mode=UpdateMode.REPLACE,
+                        etag=entity.metadata['etag'],
+                        match_condition=MatchConditions.IfNotModified
+                    )
+                    action = 'liked'
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                error_msg = str(e)
+                # Check if it's a "not found" error (entity doesn't exist yet)
+                if 'ResourceNotFound' in error_msg or 'NotFound' in error_msg:
+                    # No existing entity, create new like
+                    try:
+                        entity = {
+                            'PartitionKey': 'likes',
+                            'RowKey': row_key,
+                            'video_id': video_id,
+                            'user_id': user_id,
+                            'like_type': 'like',
+                            'timestamp': datetime.now(timezone.utc).isoformat()
+                        }
+                        self.likes_table.create_entity(entity)
+                        action = 'liked'
+                        break  # Success
+                    except Exception as create_error:
+                        # Another request created it, retry
+                        if attempt < max_retries - 1:
+                            time.sleep(0.05 * (attempt + 1))  # Exponential backoff
+                            continue
+                        else:
+                            raise
+                # Check if it's a precondition failed (ETag mismatch - race condition)
+                elif 'PreconditionFailed' in error_msg or attempt < max_retries - 1:
+                    # Retry with backoff
+                    time.sleep(0.05 * (attempt + 1))  # 50ms, 100ms, 150ms
+                    continue
+                else:
+                    raise
         
         # Return updated counts
         counts = self.get_engagement(video_id)
@@ -88,32 +124,66 @@ class EngagementTracker:
         user_key = self._sanitize_key(user_id)
         row_key = f"{video_key}_{user_key}"
         
-        try:
-            # Check if user already liked/disliked
-            entity = self.likes_table.get_entity(partition_key="likes", row_key=row_key)
-            
-            if entity.get('like_type') == 'dislike':
-                # Already disliked, remove dislike
-                self.likes_table.delete_entity(partition_key="likes", row_key=row_key)
-                action = 'removed_dislike'
-            else:
-                # Was like, change to dislike
-                entity['like_type'] = 'dislike'
-                entity['timestamp'] = datetime.now(timezone.utc).isoformat()
-                self.likes_table.update_entity(entity)
-                action = 'disliked'
-        except:
-            # No existing entity, create new dislike
-            entity = {
-                'PartitionKey': 'likes',
-                'RowKey': row_key,
-                'video_id': video_id,
-                'user_id': user_id,
-                'like_type': 'dislike',
-                'timestamp': datetime.now(timezone.utc).isoformat()
-            }
-            self.likes_table.create_entity(entity)
-            action = 'disliked'
+        # Retry logic for race condition handling
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Check if user already liked/disliked
+                entity = self.likes_table.get_entity(partition_key="likes", row_key=row_key)
+                
+                if entity.get('like_type') == 'dislike':
+                    # Already disliked, remove dislike (use ETag for concurrency)
+                    self.likes_table.delete_entity(
+                        partition_key="likes", 
+                        row_key=row_key,
+                        etag=entity.metadata['etag'],
+                        match_condition=MatchConditions.IfNotModified
+                    )
+                    action = 'removed_dislike'
+                else:
+                    # Was like, change to dislike (use ETag for concurrency)
+                    entity['like_type'] = 'dislike'
+                    entity['timestamp'] = datetime.now(timezone.utc).isoformat()
+                    self.likes_table.update_entity(
+                        entity,
+                        mode=UpdateMode.REPLACE,
+                        etag=entity.metadata['etag'],
+                        match_condition=MatchConditions.IfNotModified
+                    )
+                    action = 'disliked'
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                error_msg = str(e)
+                # Check if it's a "not found" error (entity doesn't exist yet)
+                if 'ResourceNotFound' in error_msg or 'NotFound' in error_msg:
+                    # No existing entity, create new dislike
+                    try:
+                        entity = {
+                            'PartitionKey': 'likes',
+                            'RowKey': row_key,
+                            'video_id': video_id,
+                            'user_id': user_id,
+                            'like_type': 'dislike',
+                            'timestamp': datetime.now(timezone.utc).isoformat()
+                        }
+                        self.likes_table.create_entity(entity)
+                        action = 'disliked'
+                        break  # Success
+                    except Exception as create_error:
+                        # Another request created it, retry
+                        if attempt < max_retries - 1:
+                            time.sleep(0.05 * (attempt + 1))  # Exponential backoff
+                            continue
+                        else:
+                            raise
+                # Check if it's a precondition failed (ETag mismatch - race condition)
+                elif 'PreconditionFailed' in error_msg or attempt < max_retries - 1:
+                    # Retry with backoff
+                    time.sleep(0.05 * (attempt + 1))  # 50ms, 100ms, 150ms
+                    continue
+                else:
+                    raise
         
         # Return updated counts
         counts = self.get_engagement(video_id)

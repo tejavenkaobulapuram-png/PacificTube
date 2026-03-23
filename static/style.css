@@ -527,12 +527,88 @@ body {
 
 .video-modal-player {
     background-color: #000000;
+    position: relative;
 }
 
 .video-modal-player video {
     width: 100%;
     max-height: 70vh;
     display: block;
+}
+
+/* Subtitle Controls */
+.subtitle-controls {
+    position: absolute;
+    bottom: 60px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.cc-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 2px solid #ffffff;
+    border-radius: 4px;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cc-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #87CEEB;
+}
+
+.cc-button.active {
+    background-color: #065fd4;
+    border-color: #065fd4;
+}
+
+.cc-button svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.cc-badge {
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* Subtitle Selector */
+.subtitle-selector {
+    position: absolute;
+    bottom: 50px;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 1px solid #ffffff;
+    border-radius: 4px;
+    min-width: 150px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle-option {
+    padding: 10px 16px;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.subtitle-option:hover {
+    background-color: rgba(135, 206, 235, 0.3);
+}
+
+.subtitle-option.active {
+    background-color: #065fd4;
+    font-weight: 600;
 }
 
 .video-modal-info {
