@@ -315,13 +315,28 @@ def get_thumbnail(video_id):
         import os
         import requests
         
-        # Always generate fresh thumbnail (caching will be added later)
         print(f"🎬 Generating thumbnail for: {video_id}")
+        
+        # First, check if pre-generated thumbnail exists in blob storage
+        # (for videos with moov atom at end that require full download)
+        thumbnail_blob_name = video_id.rsplit('.', 1)[0] + '.thumb.jpg'
+        thumbnail_url = f"https://{config.STORAGE_ACCOUNT_NAME}.blob.core.windows.net/{config.CONTAINER_NAME}/{thumbnail_blob_name}?{config.SAS_TOKEN}"
+        
+        try:
+            print(f"🔍 Checking for pre-generated thumbnail...")
+            thumb_response = requests.head(thumbnail_url, timeout=5)
+            if thumb_response.status_code == 200:
+                print(f"✅ Found pre-generated thumbnail, redirecting...")
+                # Serve the pre-generated thumbnail
+                thumb_data = requests.get(thumbnail_url, timeout=30).content
+                return send_file(io.BytesIO(thumb_data), mimetype='image/jpeg')
+        except Exception as check_error:
+            print(f"ℹ️  No pre-generated thumbnail found: {check_error}")
         
         # Get video URL with SAS token
         video_url = f"https://{config.STORAGE_ACCOUNT_NAME}.blob.core.windows.net/{config.CONTAINER_NAME}/{video_id}?{config.SAS_TOKEN}"
         
-        # Download first 10MB of video (enough to get first frame)
+        # Download first 10MB of video (enough to get first frame for most videos)
         headers = {'Range': 'bytes=0-10485760'}  # 10MB
         print(f"📥 Downloading video chunk...")
         response = requests.get(video_url, headers=headers, stream=True, timeout=45)
