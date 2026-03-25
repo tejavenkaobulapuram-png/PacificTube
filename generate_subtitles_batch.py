@@ -456,6 +456,70 @@ if __name__ == '__main__':
         blob_sas_token=os.environ.get('AZURE_STORAGE_SAS_TOKEN')
     )
     
-    # Test with one video
-    video_id = "03_定例会議/Recordings/生成AI連携会議-20251219_144752-会議の録音.mp4"
-    generator.process_video_batch(video_id, languages=['ja-JP'])
+    # Discover all MP4 videos in blob storage
+    print("="*70)
+    print("BATCH SUBTITLE GENERATOR - Azure Speech Services")
+    print("="*70)
+    print()
+    print("Discovering videos in blob storage...")
+    
+    all_blobs = list(generator.container_client.list_blobs())
+    video_ids = [b.name for b in all_blobs if b.name.endswith('.mp4')]
+    
+    print(f"Found {len(video_ids)} videos total")
+    print()
+    
+    # Track results
+    processed = []
+    skipped = []
+    failed = []
+    
+    for i, video_id in enumerate(video_ids, 1):
+        print(f"[{i}/{len(video_ids)}] Processing: {video_id}")
+        print("="*60)
+        
+        # Check if subtitle already exists and is complete
+        exists, is_complete, file_size = generator.check_existing_subtitle(video_id)
+        
+        if exists and is_complete:
+            print(f"[SKIP] Subtitle already exists and is complete ({file_size:,} bytes)")
+            print(f"       File: {video_id.replace('.mp4', '.ja.vtt')}")
+            skipped.append(video_id)
+            print()
+            continue
+        elif exists and not is_complete:
+            print(f"[REGEN] Subtitle exists but is incomplete ({file_size:,} bytes)")
+            print(f"        Will regenerate...")
+        else:
+            print(f"[NEW] No subtitle found, generating...")
+        
+        try:
+            generator.process_video_batch(video_id, languages=['ja-JP'])
+            processed.append(video_id)
+        except Exception as e:
+            print(f"[ERROR] Failed to process {video_id}: {str(e)}")
+            failed.append(video_id)
+        
+        print()
+    
+    # Summary
+    print()
+    print("="*70)
+    print("SUMMARY")
+    print("="*70)
+    print(f"Total videos:     {len(video_ids)}")
+    print(f"Processed:        {len(processed)}")
+    print(f"Skipped (exist):  {len(skipped)}")
+    print(f"Failed:           {len(failed)}")
+    
+    if processed:
+        print()
+        print("Processed videos:")
+        for v in processed:
+            print(f"  ✅ {v}")
+    
+    if failed:
+        print()
+        print("Failed videos:")
+        for v in failed:
+            print(f"  ❌ {v}")
