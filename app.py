@@ -15,7 +15,6 @@ from urllib.parse import quote
 from view_tracker import ViewTracker
 from cloud_view_tracker import CloudViewTracker
 from engagement_tracker import EngagementTracker
-from thumbnail_generator import ThumbnailGenerator
 import os
 import io
 import requests
@@ -427,7 +426,6 @@ else:
         print("⚠️  Engagement tracker not available in local mode")
         engagement_tracker = None
 
-thumbnail_generator = ThumbnailGenerator()
 video_service = VideoService(view_tracker)
 
 
