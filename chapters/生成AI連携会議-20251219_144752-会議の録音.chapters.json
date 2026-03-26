@@ -2,23 +2,67 @@
   "chapters": [
     {
       "timestamp": "0:00",
-      "title": "会議開始"
+      "title": "会議開始・アジェンダ紹介"
     },
     {
-      "timestamp": "5:00",
-      "title": "議題1"
+      "timestamp": "12:21",
+      "title": "議題1：[トピック名を入力]"
     },
     {
-      "timestamp": "15:00",
-      "title": "議題2"
+      "timestamp": "20:49",
+      "title": "質疑応答・ディスカッション"
     },
     {
-      "timestamp": "30:00",
-      "title": "議題3"
+      "timestamp": "23:36",
+      "title": "まとめ・次回予定"
     },
     {
-      "timestamp": "45:00",
-      "title": "まとめ"
+      "timestamp": "28:59",
+      "title": "まとめ・次回予定"
+    },
+    {
+      "timestamp": "31:20",
+      "title": "まとめ・次回予定"
+    },
+    {
+      "timestamp": "34:26",
+      "title": "質疑応答・ディスカッション"
+    },
+    {
+      "timestamp": "38:00",
+      "title": "まとめ・次回予定"
+    },
+    {
+      "timestamp": "41:38",
+      "title": "議題2：[トピック名を入力]"
+    },
+    {
+      "timestamp": "47:05",
+      "title": "議題3：[トピック名を入力]"
+    },
+    {
+      "timestamp": "49:08",
+      "title": "議題4：デモ・実演"
+    },
+    {
+      "timestamp": "52:27",
+      "title": "議題5：[トピック名を入力]"
+    },
+    {
+      "timestamp": "56:25",
+      "title": "まとめ・次回予定"
+    },
+    {
+      "timestamp": "1:02:41",
+      "title": "まとめ・次回予定"
+    },
+    {
+      "timestamp": "1:05:26",
+      "title": "議題6：デモ・実演"
+    },
+    {
+      "timestamp": "1:08:33",
+      "title": "質疑応答・ディスカッション"
     }
   ]
 }

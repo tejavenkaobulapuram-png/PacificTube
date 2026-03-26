@@ -49,8 +49,8 @@ COMPUTER_VISION_ENDPOINT = os.environ.get('AZURE_COMPUTER_VISION_ENDPOINT', '')
 
 # Frame sampling settings
 FRAME_INTERVAL_SECONDS = 3  # Check every 3 seconds
-SLIDE_CHANGE_THRESHOLD = 0.15  # 15% difference = slide change
-MIN_CHAPTER_GAP_SECONDS = 30  # Minimum 30 seconds between chapters
+SLIDE_CHANGE_THRESHOLD = 0.25  # 25% difference = slide change (higher for Teams meetings)
+MIN_CHAPTER_GAP_SECONDS = 120  # Minimum 2 minutes between chapters (for meetings)
 
 print("="*70)
 print("Automatic Chapter Generator - Slide Detection & OCR")
@@ -85,7 +85,97 @@ def download_video(video_id, output_path):
     return output_path
 
 
-def extract_frames(video_path, interval_seconds=FRAME_INTERVAL_SECONDS):
+def extract_frames_and_detect_changes(video_path, interval_seconds=FRAME_INTERVAL_SECONDS, 
+                                      threshold=SLIDE_CHANGE_THRESHOLD, min_gap=MIN_CHAPTER_GAP_SECONDS):
+    """
+    Memory-efficient: Stream frames and detect slide changes on-the-fly
+    Only keeps frames where slides actually change (not all frames)
+    """
+    print(f"🎬 Analyzing video for slide changes (every {interval_seconds}s)...")
+    
+    cap = cv2.VideoCapture(video_path)
+    
+    if not cap.isOpened():
+        raise Exception("Could not open video file")
+    
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    duration = total_frames / fps
+    frame_interval = int(fps * interval_seconds)
+    
+    print(f"   Video: {duration:.1f} seconds ({duration/60:.1f} minutes)")
+    print(f"   FPS: {fps:.1f}")
+    print(f"   Sampling every {frame_interval} frames")
+    print(f"   Threshold: {threshold*100:.0f}% change = slide change")
+    
+    slide_changes = []
+    prev_frame_gray = None
+    last_change_timestamp = 0
+    frame_number = 0
+    checked_frames = 0
+    
+    # Always add first frame
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    ret, first_frame = cap.read()
+    if ret:
+        slide_changes.append({
+            'frame': first_frame.copy(),
+            'timestamp': 0,
+            'frame_number': 0
+        })
+        prev_frame_gray = cv2.cvtColor(cv2.resize(first_frame, (320, 180)), cv2.COLOR_BGR2GRAY)
+    
+    # Stream through frames  
+    frame_number = frame_interval
+    while frame_number < total_frames:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+        ret, frame = cap.read()
+        
+        if not ret:
+            break
+        
+        checked_frames += 1
+        timestamp = frame_number / fps
+        
+        # Check minimum gap
+        if timestamp - last_change_timestamp >= min_gap:
+            # Calculate difference with previous frame
+            curr_frame_gray = cv2.cvtColor(cv2.resize(frame, (320, 180)), cv2.COLOR_BGR2GRAY)
+            diff = cv2.absdiff(prev_frame_gray, curr_frame_gray)
+            changed_pixels = np.sum(diff > 30) / diff.size
+            
+            # Slide change detected?
+            if changed_pixels >= threshold:
+                print(f"\r   📋 Slide change at {format_time(timestamp)} (diff: {changed_pixels*100:.1f}%)")
+                slide_changes.append({
+                    'frame': frame.copy(),
+                    'timestamp': timestamp,
+                    'frame_number': frame_number
+                })
+                last_change_timestamp = timestamp
+                prev_frame_gray = curr_frame_gray
+            else:
+                # Update prev_frame for next comparison
+                prev_frame_gray = curr_frame_gray
+        
+        frame_number += frame_interval
+        
+        # Progress
+        progress = min(100.0, (frame_number / total_frames) * 100)
+        print(f"\r   Progress: {progress:.1f}% ({checked_frames} frames checked, {len(slide_changes)} changes found)", end='')
+    
+    cap.release()
+    print()
+    print(f"   ✅ Found {len(slide_changes)} slide changes")
+    
+    return slide_changes, duration
+
+
+def format_time(seconds):
+    """Format seconds as MM:SS"""
+    mins = int(seconds // 60)
+    secs = int(seconds % 60)
+    return f"{mins}:{secs:02d}"
     """Extract frames at regular intervals"""
     print(f"🎬 Extracting frames every {interval_seconds} seconds...")
     
@@ -106,7 +196,7 @@ def extract_frames(video_path, interval_seconds=FRAME_INTERVAL_SECONDS):
     frames = []
     frame_number = 0
     
-    while True:
+    while frame_number < total_frames:  # FIX: Add proper bounds check
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
         ret, frame = cap.read()
         
@@ -123,7 +213,7 @@ def extract_frames(video_path, interval_seconds=FRAME_INTERVAL_SECONDS):
         frame_number += frame_interval
         
         # Progress
-        progress = (frame_number / total_frames) * 100
+        progress = min(100.0, (frame_number / total_frames) * 100)  # FIX: Cap at 100%
         print(f"\r   Extracting: {progress:.1f}%", end='')
     
     cap.release()
@@ -252,59 +342,99 @@ def extract_text_from_frame_simple(frame):
 def identify_heading(text_lines):
     """Identify the heading from extracted text lines
     
-    Slide titles are typically:
-    - SHORT (5-30 characters)
-    - At the TOP of the slide
-    - Larger font size (taller bounding box)
-    - Not full sentences with punctuation
+    For Teams meetings with screen shares:
+    - PowerPoint slides are displayed in CENTER-LEFT of screen
+    - Teams UI (search bar, buttons) is on RIGHT side and TOP
+    - Filter out Teams UI patterns completely
+    - Look for meaningful Japanese slide titles
     """
     if not text_lines:
         return None
     
-    # Sort by Y position (top of frame first)
-    sorted_lines = sorted(text_lines, key=lambda x: x['y'])
-    
-    # Common watermarks/logos to skip
-    watermarks = ['pacific', 'prod', '©', 'copyright', 'http', 'www', '@', 
-                  'pacificworks', 'tk.pacific', 'consultants']
+    # Teams UI patterns to ALWAYS skip (these are NOT slide content)
+    teams_ui_patterns = [
+        'テキストまたはツールを検索',  # Teams search bar
+        'すべてのツール', 'ログイン', 'login', 
+        'メニュー', 'menu', 'その他', 'チャット', 'chat',
+        '参加者', 'participants', '共有', 'share',
+        '作成', '編集', '変換', '電子サイン',  # Adobe/PDF tools
+        'pacific', 'prod', '©', 'copyright', 'http', 'www', '@',
+        'pacificworks', 'tk.pacific', 'consultants',
+        '録音', 'recording', 'cc', 'キャプション',
+        '退出', 'leave', '挙手', 'raise hand',
+    ]
     
     candidates = []
     
-    for line in sorted_lines[:10]:  # Check top 10 text lines
+    for line in text_lines:
         text = line['text'].strip()
         text_lower = text.lower()
         
-        # Skip very short text (single characters, numbers)
-        if len(text) < 3:
+        # Skip very short text (single chars, numbers, UI icons)
+        if len(text) < 6:
             continue
         
-        # Skip watermarks
-        if any(wm in text_lower for wm in watermarks):
+        # Skip ALL Teams UI patterns
+        if any(ui in text for ui in teams_ui_patterns) or any(ui in text_lower for ui in teams_ui_patterns):
             continue
         
-        # Skip dates (2024, 2024/03/26, etc)
-        if text.replace('/', '').replace('-', '').replace('.', '').isdigit():
+        # Skip text with Q, icons, or random symbols (Teams search bar has "Q")
+        if 'Q' in text or '|' in text or '号' in text or '骨' in text:
             continue
         
-        # Calculate bounding box height (taller = larger font = likely heading)
+        # Skip names (presenter names in video call - usually short with spaces)
+        words = text.split()
+        if len(words) <= 3 and all(len(w) <= 5 for w in words):
+            # Likely a name like "澁谷 宏樹" - skip unless it's clearly a title
+            if not any(keyword in text for keyword in ['の', 'について', '紹介', '説明', '概要', '取り組み']):
+                continue
+        
+        # Skip dates and numbers
+        clean_text = text.replace('/', '').replace('-', '').replace('.', '').replace(' ', '').replace(':', '')
+        if clean_text.isdigit():
+            continue
+        
+        # Calculate position - slides are in LEFT-CENTER of Teams window
         bbox = line['bbox']
-        box_height = abs(bbox[5] - bbox[1])  # Y difference
+        x_pos = min(bbox[0], bbox[2], bbox[4], bbox[6])  # Leftmost X
+        y_pos = line['y']
+        box_height = abs(bbox[5] - bbox[1])
+        box_width = abs(bbox[2] - bbox[0])
         
-        # Prefer titles that are:
-        # 1. Short (5-40 chars) - headings are concise
-        # 2. At top of slide (low Y value)
-        # 3. Not ending with punctuation like 。(full sentences are body text)
+        # In Teams, slide content is typically:
+        # - X position: 50-800 (left side of screen, not right where UI is)
+        # - Y position: 150-550 (middle, not top toolbar or bottom)
+        is_slide_area = x_pos < 800 and 100 < y_pos < 600
         
-        is_short = 5 <= len(text) <= 40
-        is_body_text = text.endswith('。') or text.endswith('、') or len(text) > 50
+        # Count Japanese characters (slide titles have meaningful Japanese)
+        japanese_chars = sum(1 for c in text if '\u3040' <= c <= '\u309F' or  # Hiragana
+                                                 '\u30A0' <= c <= '\u30FF' or  # Katakana
+                                                 '\u4E00' <= c <= '\u9FFF')    # Kanji
+        japanese_ratio = japanese_chars / len(text) if text else 0
         
-        if is_short and not is_body_text:
-            # Score: prefer short text at top with large font
-            score = (1000 - line['y']) + (box_height * 10) - (len(text) * 2)
-            candidates.append((text, score))
+        # Good slide titles: 8-60 chars, mostly Japanese, in slide area
+        is_good_length = 8 <= len(text) <= 60
+        has_japanese = japanese_ratio > 0.4
+        
+        # Not body text (full sentences)
+        is_body_text = text.endswith('。') or text.endswith('、') or len(text) > 60
+        
+        if is_good_length and has_japanese and not is_body_text:
+            # Score: prefer slide area, large font, good Japanese content
+            area_score = 200 if is_slide_area else 0
+            size_score = box_height * 30 + box_width
+            japanese_score = japanese_ratio * 100
+            
+            # Bonus for title-like keywords
+            title_keywords = ['の取り組み', '紹介', '概要', '説明', 'について', '活用', 
+                            '構築', '開発', '設計', '結果', '報告', '提案']
+            keyword_bonus = 100 if any(kw in text for kw in title_keywords) else 0
+            
+            score = area_score + size_score + japanese_score + keyword_bonus
+            candidates.append((text, score, x_pos, y_pos))
     
     if candidates:
-        # Return highest scoring candidate (top, large font, short)
+        # Return highest scoring candidate
         candidates.sort(key=lambda x: x[1], reverse=True)
         return candidates[0][0]
     
@@ -322,15 +452,11 @@ def generate_chapters(video_id, use_azure_ocr=True):
         download_video(video_id, video_path)
         print()
         
-        # Step 2: Extract frames
-        frames, duration = extract_frames(video_path)
+        # Step 2: Extract frames AND detect slide changes (memory-efficient streaming)
+        slide_changes, duration = extract_frames_and_detect_changes(video_path)
         print()
         
-        # Step 3: Detect slide changes
-        slide_changes = detect_slide_changes(frames)
-        print()
-        
-        # Step 4: Extract text from slide changes
+        # Step 3: Extract text from slide changes
         print("📝 Extracting text from slides...")
         
         # Initialize Azure Computer Vision if available
@@ -348,6 +474,7 @@ def generate_chapters(video_id, use_azure_ocr=True):
                 cv_client = None
         
         chapters = []
+        rate_limit_cooldown = 0  # Track when we can make next call
         
         for i, slide in enumerate(slide_changes):
             timestamp = slide['timestamp']
@@ -359,25 +486,33 @@ def generate_chapters(video_id, use_azure_ocr=True):
             heading = None
             
             if cv_client:
-                try:
-                    # Add delay to avoid rate limit (Free tier: 20 calls/minute)
-                    # Wait 3.5 seconds between calls (17 calls/minute max)
-                    if i > 0:
-                        time.sleep(3.5)
-                    
-                    text_lines = extract_text_from_frame_azure(frame, cv_client)
-                    heading = identify_heading(text_lines)
-                except Exception as e:
-                    print(f"      ⚠️ OCR failed: {e}")
-                    # If rate limit hit, wait 60 seconds and try again
-                    if "Too Many Requests" in str(e):
-                        print(f"      ⏳ Rate limit hit, waiting 60 seconds...")
-                        time.sleep(60)
-                        try:
-                            text_lines = extract_text_from_frame_azure(frame, cv_client)
-                            heading = identify_heading(text_lines)
-                        except:
-                            pass  # Give up on this one
+                # Handle rate limiting proactively
+                if rate_limit_cooldown > 0:
+                    wait_time = rate_limit_cooldown
+                    print(f"      ⏳ Rate limit cooldown: waiting {wait_time}s...")
+                    time.sleep(wait_time)
+                    rate_limit_cooldown = 0
+                
+                for attempt in range(3):  # Retry up to 3 times
+                    try:
+                        # Add delay to avoid rate limit (Free tier: 20 calls/minute)
+                        if i > 0 and attempt == 0:
+                            time.sleep(3.5)
+                        
+                        text_lines = extract_text_from_frame_azure(frame, cv_client)
+                        heading = identify_heading(text_lines)
+                        break  # Success - exit retry loop
+                        
+                    except Exception as e:
+                        error_msg = str(e)
+                        if "Too Many Requests" in error_msg or "429" in error_msg:
+                            wait_time = 65 if attempt == 0 else 120
+                            print(f"      ⚠️ Rate limit hit (attempt {attempt+1}/3), waiting {wait_time}s...")
+                            time.sleep(wait_time)
+                            rate_limit_cooldown = 5  # Add small cooldown after rate limit
+                        else:
+                            print(f"      ⚠️ OCR error: {e}")
+                            break  # Non-rate-limit error, don't retry
             
             # Fallback title if no heading found
             if not heading:
