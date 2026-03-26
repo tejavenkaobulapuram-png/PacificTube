@@ -177,23 +177,70 @@ class VideoService:
         return subtitles
     
     def get_chapters(self, video_id, interval_minutes=5):
-        """Generate chapters/timestamps from subtitle file.
+        """Get chapters/timestamps for a video.
         
-        Auto-generates chapter markers at regular intervals based on subtitle content.
-        Each chapter shows the first subtitle text at that timestamp.
+        Priority:
+        1. Manual chapters file (.chapters.json) - Best quality, user-defined titles
+        2. Auto-generated from subtitles - Fallback with transcription text
+        
+        Manual chapters file format (video.chapters.json):
+        {
+            "chapters": [
+                {"timestamp": "0:00", "title": "イントロダクション"},
+                {"timestamp": "5:30", "title": "曲げ剛性の影響（ボックスカルバート）"},
+                {"timestamp": "12:15", "title": "演習−曲げ剛性の影響"}
+            ]
+        }
         
         Args:
             video_id: Video file path (e.g., folder/video.mp4)
-            interval_minutes: Minutes between chapter markers (default: 5)
+            interval_minutes: Minutes between auto-generated markers (default: 5)
         
         Returns:
             List of chapter objects: [{timestamp: seconds, title: text}, ...]
         """
+        import json
+        import re
+        
         chapters = []
+        video_base = video_id.rsplit('.', 1)[0] if '.' in video_id else video_id
+        
+        # ============================================
+        # PRIORITY 1: Check for manual chapters file
+        # ============================================
+        chapters_blob_name = f"{video_base}.chapters.json"
         
         try:
-            # Find subtitle file for this video
-            video_base = video_id.rsplit('.', 1)[0] if '.' in video_id else video_id
+            blob_client = self.container_client.get_blob_client(chapters_blob_name)
+            chapters_content = blob_client.download_blob().readall().decode('utf-8')
+            chapters_data = json.loads(chapters_content)
+            
+            if 'chapters' in chapters_data and len(chapters_data['chapters']) > 0:
+                print(f"📋 Found manual chapters file: {chapters_blob_name}")
+                
+                for chapter in chapters_data['chapters']:
+                    # Parse timestamp (supports "0:00", "5:30", "1:25:00" formats)
+                    timestamp_str = chapter.get('timestamp', '0:00')
+                    timestamp_seconds = self._parse_timestamp_string(timestamp_str)
+                    
+                    chapters.append({
+                        'timestamp': timestamp_seconds,
+                        'title': chapter.get('title', f'Chapter at {timestamp_str}'),
+                        'description': chapter.get('description', '')
+                    })
+                
+                # Sort by timestamp
+                chapters.sort(key=lambda x: x['timestamp'])
+                return chapters
+                
+        except Exception as e:
+            # No manual chapters file, continue to auto-generation
+            print(f"ℹ️ No manual chapters file, will auto-generate from subtitles")
+        
+        # ============================================
+        # PRIORITY 2: Auto-generate from subtitles
+        # ============================================
+        try:
             subtitle_blob_name = f"{video_base}.ja.vtt"  # Try Japanese subtitle first
             
             # Check if subtitle exists
@@ -219,8 +266,6 @@ class VideoService:
                     return []
             
             # Parse VTT file to extract timestamps and text
-            import re
-            
             # VTT timestamp pattern: 00:00:00.000 --> 00:00:05.000
             timestamp_pattern = r'(\d{2}:\d{2}:\d{2}\.\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}\.\d{3})'
             
@@ -310,6 +355,30 @@ class VideoService:
             print(f"Error generating chapters for {video_id}: {e}")
         
         return chapters
+    
+    def _parse_timestamp_string(self, timestamp_str):
+        """Parse timestamp string to seconds.
+        
+        Supports formats:
+        - "0:00" -> 0 seconds
+        - "5:30" -> 330 seconds  
+        - "1:25:00" -> 5100 seconds
+        """
+        parts = timestamp_str.strip().split(':')
+        
+        if len(parts) == 2:
+            # MM:SS format
+            minutes = int(parts[0])
+            seconds = int(parts[1])
+            return minutes * 60 + seconds
+        elif len(parts) == 3:
+            # HH:MM:SS format
+            hours = int(parts[0])
+            minutes = int(parts[1])
+            seconds = int(parts[2])
+            return hours * 3600 + minutes * 60 + seconds
+        else:
+            return 0
     
     def _folders_to_list(self, folders_dict):
         """Convert folder dict to list format"""
