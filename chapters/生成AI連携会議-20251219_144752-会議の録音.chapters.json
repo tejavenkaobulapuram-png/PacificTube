@@ -1,0 +1,24 @@
+{
+  "chapters": [
+    {
+      "timestamp": "0:00",
+      "title": "会議開始"
+    },
+    {
+      "timestamp": "5:00",
+      "title": "議題1"
+    },
+    {
+      "timestamp": "15:00",
+      "title": "議題2"
+    },
+    {
+      "timestamp": "30:00",
+      "title": "議題3"
+    },
+    {
+      "timestamp": "45:00",
+      "title": "まとめ"
+    }
+  ]
+}
