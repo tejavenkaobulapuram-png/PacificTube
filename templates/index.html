@@ -83,46 +83,62 @@
 
     <!-- Video Player Modal -->
     <div id="videoModal" class="video-modal" style="display: none;">
-        <div class="video-modal-content">
-            <div class="video-modal-header">
-                <h2 id="modalTitle"></h2>
-                <button class="close-button" onclick="closeModal()">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                    </svg>
-                </button>
-            </div>
-            <div class="video-modal-player">
-                <video id="videoPlayer" controls autoplay crossorigin="anonymous"></video>
-                <!-- Custom CC Button -->
-                <div class="subtitle-controls">
-                    <button class="cc-button" id="ccButton" onclick="toggleSubtitles()" title="Subtitles">
+        <div class="video-modal-wrapper">
+            <!-- Main Video Content -->
+            <div class="video-modal-content">
+                <div class="video-modal-header">
+                    <h2 id="modalTitle"></h2>
+                    <button class="close-button" onclick="closeModal()">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/>
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                         </svg>
-                        <span class="cc-badge" id="ccBadge">CC</span>
                     </button>
-                    <!-- Subtitle selector (hidden by default) -->
-                    <div class="subtitle-selector" id="subtitleSelector" style="display: none;">
-                        <div class="subtitle-option" onclick="selectSubtitle(null)">Off</div>
-                        <div id="subtitleOptions"></div>
+                </div>
+                <div class="video-modal-player">
+                    <video id="videoPlayer" controls autoplay crossorigin="anonymous"></video>
+                    <!-- Custom CC Button -->
+                    <div class="subtitle-controls">
+                        <button class="cc-button" id="ccButton" onclick="toggleSubtitles()" title="Subtitles">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/>
+                            </svg>
+                            <span class="cc-badge" id="ccBadge">CC</span>
+                        </button>
+                        <!-- Subtitle selector (hidden by default) -->
+                        <div class="subtitle-selector" id="subtitleSelector" style="display: none;">
+                            <div class="subtitle-option" onclick="selectSubtitle(null)">Off</div>
+                            <div id="subtitleOptions"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="video-modal-info">
-                <div class="info-row">
-                    <svg class="info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z" />
-                    </svg>
-                    <span id="modalDate"></span>
+                <div class="video-modal-info">
+                    <div class="info-row">
+                        <svg class="info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z" />
+                        </svg>
+                        <span id="modalDate"></span>
+                    </div>
+                    <div class="info-row">
+                        <svg class="info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                        </svg>
+                        <span id="modalSize"></span>
+                    </div>
                 </div>
-                <div class="info-row">
-                    <svg class="info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
-                    </svg>
-                    <span id="modalSize"></span>
+                
+                <!-- Chapters/Timestamps Section -->
+                <div class="video-chapters-section" id="chaptersSection" style="display: none;">
+                    <div class="chapters-header">
+                        <svg class="chapters-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                        </svg>
+                        <h3>チャプター</h3>
+                        <span class="chapters-count" id="chaptersCount"></span>
+                    </div>
+                    <div class="chapters-list" id="chaptersList">
+                        <!-- Chapters will be loaded here -->
+                    </div>
                 </div>
-            </div>
 
             <!-- Engagement Section (Like, Dislike, Share, Comments) -->
             <div class="video-modal-engagement">
@@ -173,9 +189,23 @@
                     </div>
                 </div>
             </div>
+            </div>
+            
+            <!-- Related Videos Sidebar -->
+            <div class="related-videos-sidebar" id="relatedVideosSidebar">
+                <div class="related-videos-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/>
+                    </svg>
+                    <h3>関連動画</h3>
+                </div>
+                <div class="related-videos-list" id="relatedVideosList">
+                    <!-- Related videos will be loaded here -->
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}?v=20260323-6"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=20260326-1"></script>
 </body>
 </html>

@@ -304,8 +304,9 @@ function openModal(video) {
     player.src = video.url;
     modal.style.display = 'flex';
 
-    // Store current video ID for engagement actions
+    // Store current video ID and video object for engagement actions
     window.currentVideoId = video.id;
+    window.currentVideo = video;
     
     // Reset engagement button states (prevent stuck locks)
     isLikeProcessing = false;
@@ -331,6 +332,12 @@ function openModal(video) {
     
     // Load subtitles for this video
     loadSubtitles(video.id);
+    
+    // Load chapters/timestamps for this video
+    loadChapters(video.id);
+    
+    // Load related videos from same folder
+    loadRelatedVideos(video);
 
     // Close on background click
     modal.onclick = (e) => {
@@ -968,3 +975,253 @@ document.addEventListener('keydown', (e) => {
         closeModal();
     }
 });
+
+// ==========================================
+// CHAPTERS / TIMESTAMPS FEATURE
+// ==========================================
+
+// Load chapters for a video
+async function loadChapters(videoId) {
+    const chaptersSection = document.getElementById('chaptersSection');
+    const chaptersList = document.getElementById('chaptersList');
+    const chaptersCount = document.getElementById('chaptersCount');
+    
+    if (!chaptersSection) return;
+    
+    // Show loading state
+    chaptersSection.style.display = 'block';
+    chaptersList.innerHTML = '<div class="chapters-loading">チャプターを読み込んでいます...</div>';
+    
+    try {
+        const response = await fetch(`/api/chapters/${encodeURIComponent(videoId)}`);
+        
+        if (!response.ok) {
+            chaptersSection.style.display = 'none';
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success || !data.chapters || data.chapters.length === 0) {
+            chaptersSection.style.display = 'none';
+            return;
+        }
+        
+        // Display chapters
+        chaptersCount.textContent = `${data.chapters.length}`;
+        chaptersList.innerHTML = '';
+        
+        data.chapters.forEach((chapter, index) => {
+            const chapterItem = document.createElement('div');
+            chapterItem.className = 'chapter-item';
+            chapterItem.onclick = () => seekToChapter(chapter.timestamp);
+            
+            chapterItem.innerHTML = `
+                <span class="chapter-timestamp">${formatTimestamp(chapter.timestamp)}</span>
+                <div class="chapter-content">
+                    <div class="chapter-title">${escapeHtml(chapter.title)}</div>
+                    ${chapter.description ? `<div class="chapter-description">${escapeHtml(chapter.description)}</div>` : ''}
+                </div>
+            `;
+            
+            chaptersList.appendChild(chapterItem);
+        });
+        
+        // Set up tracking of current chapter based on video time
+        setupChapterTracking();
+        
+    } catch (error) {
+        console.error('Error loading chapters:', error);
+        chaptersSection.style.display = 'none';
+    }
+}
+
+// Format timestamp (seconds) to HH:MM:SS or MM:SS
+function formatTimestamp(seconds) {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hrs > 0) {
+        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Seek video to chapter timestamp
+function seekToChapter(timestamp) {
+    const player = document.getElementById('videoPlayer');
+    if (player) {
+        player.currentTime = timestamp;
+        player.play();
+    }
+}
+
+// Track current chapter as video plays
+function setupChapterTracking() {
+    const player = document.getElementById('videoPlayer');
+    if (!player) return;
+    
+    player.addEventListener('timeupdate', updateActiveChapter);
+}
+
+// Update which chapter is active based on current time
+function updateActiveChapter() {
+    const player = document.getElementById('videoPlayer');
+    const chapterItems = document.querySelectorAll('.chapter-item');
+    
+    if (!player || chapterItems.length === 0) return;
+    
+    const currentTime = player.currentTime;
+    
+    chapterItems.forEach((item, index) => {
+        const timestampText = item.querySelector('.chapter-timestamp').textContent;
+        const timestamp = parseTimestamp(timestampText);
+        
+        // Get next chapter timestamp
+        let nextTimestamp = Infinity;
+        if (index < chapterItems.length - 1) {
+            const nextTimestampText = chapterItems[index + 1].querySelector('.chapter-timestamp').textContent;
+            nextTimestamp = parseTimestamp(nextTimestampText);
+        }
+        
+        if (currentTime >= timestamp && currentTime < nextTimestamp) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
+
+// Parse timestamp string (HH:MM:SS or MM:SS) to seconds
+function parseTimestamp(timeStr) {
+    const parts = timeStr.split(':').map(p => parseInt(p, 10));
+    if (parts.length === 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+        return parts[0] * 60 + parts[1];
+    }
+    return 0;
+}
+
+// ==========================================
+// RELATED VIDEOS SIDEBAR FEATURE
+// ==========================================
+
+// Load related videos (same folder)
+function loadRelatedVideos(currentVideo) {
+    const sidebar = document.getElementById('relatedVideosSidebar');
+    const videosList = document.getElementById('relatedVideosList');
+    
+    if (!sidebar || !videosList) return;
+    
+    // Get videos from the same folder, excluding current video
+    const relatedVideos = allVideos.filter(v => 
+        v.folder === currentVideo.folder && v.id !== currentVideo.id
+    );
+    
+    if (relatedVideos.length === 0) {
+        videosList.innerHTML = '<div class="related-videos-empty">このフォルダには他の動画がありません</div>';
+        return;
+    }
+    
+    videosList.innerHTML = '';
+    
+    relatedVideos.forEach(video => {
+        const card = document.createElement('div');
+        card.className = 'related-video-card';
+        card.onclick = () => switchToVideo(video);
+        
+        card.innerHTML = `
+            <div class="related-video-thumbnail">
+                <div class="thumbnail-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                </div>
+            </div>
+            <div class="related-video-info">
+                <div class="related-video-title">${escapeHtml(video.name)}</div>
+                <div class="related-video-meta">${formatViews(video.views)}回視聴</div>
+            </div>
+        `;
+        
+        videosList.appendChild(card);
+        
+        // Load thumbnail for related video
+        loadRelatedThumbnail(video.id, card);
+    });
+}
+
+// Load thumbnail for related video card
+function loadRelatedThumbnail(videoId, cardElement) {
+    const thumbnailDiv = cardElement.querySelector('.related-video-thumbnail');
+    if (!thumbnailDiv) return;
+    
+    const img = document.createElement('img');
+    img.style.display = 'none';
+    
+    img.onload = function() {
+        img.style.display = 'block';
+        const placeholder = thumbnailDiv.querySelector('.thumbnail-placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+    };
+    
+    img.onerror = function() {
+        // Keep showing placeholder
+    };
+    
+    img.src = `/api/thumbnail/${encodeURIComponent(videoId)}`;
+    thumbnailDiv.appendChild(img);
+}
+
+// Switch to a different video (from related videos)
+function switchToVideo(video) {
+    const player = document.getElementById('videoPlayer');
+    
+    // Stop current video
+    if (player) {
+        player.pause();
+        
+        // Remove existing tracks
+        const existingTracks = player.querySelectorAll('track');
+        existingTracks.forEach(track => track.remove());
+    }
+    
+    // Update modal with new video
+    document.getElementById('modalTitle').textContent = video.name;
+    document.getElementById('modalDate').textContent = `更新日: ${formatDate(video.lastModified)}`;
+    document.getElementById('modalSize').textContent = `サイズ: ${formatFileSize(video.size)}`;
+    
+    // Update video source
+    player.src = video.url;
+    
+    // Update current video ID
+    window.currentVideoId = video.id;
+    
+    // Reset engagement button states
+    const likeBtn = document.getElementById('likeBtn');
+    const dislikeBtn = document.getElementById('dislikeBtn');
+    if (likeBtn) likeBtn.classList.remove('active');
+    if (dislikeBtn) dislikeBtn.classList.remove('active');
+    
+    // Increment view count
+    incrementViewCount(video.id, video.name);
+    
+    // Reload engagement, subtitles, chapters, and related videos
+    loadEngagement(video.id);
+    loadSubtitles(video.id);
+    loadChapters(video.id);
+    loadRelatedVideos(video);
+    
+    // Update active state in related videos list
+    updateRelatedVideoActiveState(video.id);
+}
+
+// Update active state for related video cards
+function updateRelatedVideoActiveState(activeVideoId) {
+    const cards = document.querySelectorAll('.related-video-card');
+    cards.forEach(card => {
+        card.classList.remove('active');
+    });
+}

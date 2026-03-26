@@ -176,6 +176,141 @@ class VideoService:
         
         return subtitles
     
+    def get_chapters(self, video_id, interval_minutes=5):
+        """Generate chapters/timestamps from subtitle file.
+        
+        Auto-generates chapter markers at regular intervals based on subtitle content.
+        Each chapter shows the first subtitle text at that timestamp.
+        
+        Args:
+            video_id: Video file path (e.g., folder/video.mp4)
+            interval_minutes: Minutes between chapter markers (default: 5)
+        
+        Returns:
+            List of chapter objects: [{timestamp: seconds, title: text}, ...]
+        """
+        chapters = []
+        
+        try:
+            # Find subtitle file for this video
+            video_base = video_id.rsplit('.', 1)[0] if '.' in video_id else video_id
+            subtitle_blob_name = f"{video_base}.ja.vtt"  # Try Japanese subtitle first
+            
+            # Check if subtitle exists
+            try:
+                blob_client = self.container_client.get_blob_client(subtitle_blob_name)
+                subtitle_content = blob_client.download_blob().readall().decode('utf-8')
+            except Exception:
+                # Try other languages if Japanese not found
+                folder_path = video_id.rsplit('/', 1)[0] if '/' in video_id else ''
+                prefix = video_base
+                
+                subtitle_content = None
+                for blob in self.container_client.list_blobs(name_starts_with=prefix):
+                    if blob.name.lower().endswith('.vtt'):
+                        try:
+                            blob_client = self.container_client.get_blob_client(blob.name)
+                            subtitle_content = blob_client.download_blob().readall().decode('utf-8')
+                            break
+                        except:
+                            continue
+                
+                if not subtitle_content:
+                    return []
+            
+            # Parse VTT file to extract timestamps and text
+            import re
+            
+            # VTT timestamp pattern: 00:00:00.000 --> 00:00:05.000
+            timestamp_pattern = r'(\d{2}:\d{2}:\d{2}\.\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}\.\d{3})'
+            
+            # Split into cues
+            lines = subtitle_content.split('\n')
+            cues = []
+            current_cue = None
+            
+            for line in lines:
+                line = line.strip()
+                
+                # Check for timestamp line
+                match = re.match(timestamp_pattern, line)
+                if match:
+                    start_time = match.group(1)
+                    # Convert HH:MM:SS.mmm to seconds
+                    parts = start_time.split(':')
+                    hours = int(parts[0])
+                    minutes = int(parts[1])
+                    seconds = float(parts[2])
+                    timestamp_seconds = hours * 3600 + minutes * 60 + seconds
+                    
+                    current_cue = {
+                        'timestamp': timestamp_seconds,
+                        'text': ''
+                    }
+                elif current_cue and line and not line.startswith('WEBVTT') and not line.isdigit():
+                    # This is subtitle text
+                    if current_cue['text']:
+                        current_cue['text'] += ' '
+                    current_cue['text'] += line
+                    
+                    # Save cue when we've collected text
+                    if current_cue['text']:
+                        cues.append(current_cue)
+                        current_cue = None
+            
+            if not cues:
+                return []
+            
+            # Generate chapters at regular intervals
+            interval_seconds = interval_minutes * 60
+            last_timestamp = cues[-1]['timestamp'] if cues else 0
+            
+            # Always add first chapter at 0:00
+            chapter_timestamps = [0]
+            
+            # Add chapters at intervals
+            current_time = interval_seconds
+            while current_time < last_timestamp:
+                chapter_timestamps.append(current_time)
+                current_time += interval_seconds
+            
+            # Create chapters with text from nearest subtitle
+            for chapter_time in chapter_timestamps:
+                # Find the subtitle closest to (but after) this timestamp
+                nearest_cue = None
+                for cue in cues:
+                    if cue['timestamp'] >= chapter_time:
+                        nearest_cue = cue
+                        break
+                
+                if nearest_cue:
+                    # Clean up the text (first 50 chars for title)
+                    text = nearest_cue['text'].strip()
+                    # Remove common artifacts
+                    text = re.sub(r'<[^>]+>', '', text)  # Remove HTML tags
+                    text = text.replace('\n', ' ').strip()
+                    
+                    # Create a readable title
+                    if len(text) > 60:
+                        # Find a natural break point
+                        title = text[:60]
+                        last_space = title.rfind(' ')
+                        if last_space > 30:
+                            title = title[:last_space]
+                        title += '...'
+                    else:
+                        title = text
+                    
+                    chapters.append({
+                        'timestamp': chapter_time,
+                        'title': title if title else f"チャプター {len(chapters) + 1}"
+                    })
+            
+        except Exception as e:
+            print(f"Error generating chapters for {video_id}: {e}")
+        
+        return chapters
+    
     def _folders_to_list(self, folders_dict):
         """Convert folder dict to list format"""
         result = []
@@ -277,6 +412,24 @@ def get_subtitles(video_id):
             'success': True,
             'subtitles': subtitles,
             'count': len(subtitles)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/chapters/<path:video_id>')
+def get_chapters(video_id):
+    """API endpoint to get chapters/timestamps for a video.
+    Auto-generates chapters from subtitles at regular intervals."""
+    try:
+        chapters = video_service.get_chapters(video_id)
+        return jsonify({
+            'success': True,
+            'chapters': chapters,
+            'count': len(chapters)
         })
     except Exception as e:
         return jsonify({
