@@ -1,64 +1,49 @@
 {
+  "video": "03_定例会議/Recordings/生成AI関連情報連携会議-20250612_105717-会議の録音.mp4",
   "chapters": [
     {
       "timestamp": "0:00",
-      "title": "会議開始・アジェンダ紹介"
+      "title": "生成AI関連情報連携会議"
     },
     {
-      "timestamp": "4:42",
-      "title": "まとめ・次回予定"
+      "timestamp": "2:02",
+      "title": "本日の次第"
     },
     {
-      "timestamp": "8:24",
-      "title": "議題1：[トピック名を入力]"
+      "timestamp": "15:11",
+      "title": "具体的なアプローチ"
     },
     {
-      "timestamp": "15:16",
-      "title": "質疑応答・ディスカッション"
+      "timestamp": "17:14",
+      "title": "解答案を生成しました。解答案はあくまでも考え方の一例としてご利用ください。試験ではご自身の経験や考"
     },
     {
-      "timestamp": "21:19",
-      "title": "議題2：[トピック名を入力]"
+      "timestamp": "25:02",
+      "title": "具体的なアプローチ"
     },
     {
-      "timestamp": "24:42",
-      "title": "議題3：[トピック名を入力]"
+      "timestamp": "27:17",
+      "title": "技術士試験エージェントの概要"
     },
     {
-      "timestamp": "28:30",
-      "title": "まとめ・次回予定"
+      "timestamp": "29:20",
+      "title": "任意のスライド1枚絵をpdfで入力すると、レイアウトを分割しVLM"
     },
     {
-      "timestamp": "31:21",
-      "title": "質疑応答・ディスカッション"
+      "timestamp": "39:14",
+      "title": "桜AI全体構成図"
     },
     {
-      "timestamp": "33:29",
-      "title": "質疑応答・ディスカッション"
+      "timestamp": "49:44",
+      "title": "チャプター 9"
     },
     {
-      "timestamp": "35:47",
-      "title": "議題4：[トピック名を入力]"
+      "timestamp": "51:47",
+      "title": "スケジュール"
     },
     {
-      "timestamp": "39:04",
-      "title": "質疑応答・ディスカッション"
-    },
-    {
-      "timestamp": "42:30",
-      "title": "質疑応答・ディスカッション"
-    },
-    {
-      "timestamp": "47:14",
-      "title": "議題5：[トピック名を入力]"
-    },
-    {
-      "timestamp": "50:01",
-      "title": "まとめ・次回予定"
-    },
-    {
-      "timestamp": "52:12",
-      "title": "まとめ・次回予定"
+      "timestamp": "53:12",
+      "title": "ありがとうございました"
     }
   ]
 }

@@ -1,72 +1,65 @@
 {
+  "video": "03_定例会議/Recordings/生成AI連携会議-20251121_145723-会議の録音.mp4",
   "chapters": [
     {
       "timestamp": "0:00",
-      "title": "会議開始・アジェンダ紹介"
+      "title": "生成AI連携会議"
     },
     {
-      "timestamp": "2:50",
-      "title": "議題1：[トピック名を入力]"
+      "timestamp": "2:24",
+      "title": "本日の次第"
     },
     {
-      "timestamp": "9:51",
-      "title": "議題2：[トピック名を入力]"
+      "timestamp": "4:05",
+      "title": "0. 技術開発室長 ご挨拶 + 本日の次第説明(2分)"
     },
     {
-      "timestamp": "12:58",
-      "title": "議題3：[トピック名を入力]"
+      "timestamp": "7:40",
+      "title": "1. 会議の主旨説明（昨期の振り返り）"
     },
     {
-      "timestamp": "16:10",
-      "title": "議題4：[トピック名を入力]"
+      "timestamp": "9:08",
+      "title": "2. メンバー紹介"
     },
     {
-      "timestamp": "20:43",
-      "title": "まとめ・次回予定"
+      "timestamp": "21:57",
+      "title": "3. 会議の進め方"
     },
     {
-      "timestamp": "23:37",
-      "title": "質疑応答・ディスカッション"
+      "timestamp": "25:35",
+      "title": "~ ナレッジとAIが融合する Mir'AI な働き方の創造"
     },
     {
-      "timestamp": "26:34",
-      "title": "議題5：[トピック名を入力]"
+      "timestamp": "27:41",
+      "title": "·繁忙期における作業時間半減·満足度向上·品質向上など"
     },
     {
-      "timestamp": "31:49",
-      "title": "まとめ・次回予定"
+      "timestamp": "30:11",
+      "title": "251118時点 デモ動画(今後更新予定)"
     },
     {
-      "timestamp": "38:58",
-      "title": "質疑応答・ディスカッション"
+      "timestamp": "35:35",
+      "title": "·繁忙期における作業時間半減·満足度向上·品質向上など"
     },
     {
-      "timestamp": "41:15",
-      "title": "議題6：[トピック名を入力]"
+      "timestamp": "41:58",
+      "title": "開発体制"
     },
     {
-      "timestamp": "43:29",
-      "title": "まとめ・次回予定"
+      "timestamp": "43:59",
+      "title": "251118時点 デモ動画(今後更新予定)"
     },
     {
-      "timestamp": "46:32",
-      "title": "議題7：[トピック名を入力]"
+      "timestamp": "48:26",
+      "title": "2. メンバー紹介"
     },
     {
-      "timestamp": "50:28",
-      "title": "議題8：[トピック名を入力]"
+      "timestamp": "53:41",
+      "title": "生成AI関連情報連携会議"
     },
     {
-      "timestamp": "56:13",
-      "title": "質疑応答・ディスカッション"
-    },
-    {
-      "timestamp": "59:43",
-      "title": "まとめ・次回予定"
-    },
-    {
-      "timestamp": "1:01:50",
-      "title": "まとめ・次回予定"
+      "timestamp": "1:02:41",
+      "title": "ありがとうございました"
     }
   ]
 }

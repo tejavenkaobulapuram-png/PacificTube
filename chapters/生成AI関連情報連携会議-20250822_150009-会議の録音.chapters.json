@@ -1,64 +1,61 @@
 {
+  "video": "03_定例会議/Recordings/生成AI関連情報連携会議-20250822_150009-会議の録音.mp4",
   "chapters": [
     {
       "timestamp": "0:00",
-      "title": "会議開始・アジェンダ紹介"
+      "title": "生成AI関連情報連携会議"
     },
     {
-      "timestamp": "3:41",
-      "title": "まとめ・次回予定"
+      "timestamp": "2:02",
+      "title": "ChatGPT等の利用に関する注意喚起"
     },
     {
-      "timestamp": "6:16",
-      "title": "議題1：デモ・実演"
+      "timestamp": "6:35",
+      "title": "M365 Copilot（有償版）の最新情報"
     },
     {
-      "timestamp": "8:29",
-      "title": "議題2：[トピック名を入力]"
+      "timestamp": "8:38",
+      "title": "2プロンプトコーチ:プロンプトの添削"
     },
     {
-      "timestamp": "11:34",
-      "title": "議題3：[トピック名を入力]"
+      "timestamp": "11:20",
+      "title": "チャプター 5"
     },
     {
-      "timestamp": "14:17",
-      "title": "まとめ・次回予定"
+      "timestamp": "13:23",
+      "title": "AIエージェントの紹介·実演"
     },
     {
-      "timestamp": "16:57",
-      "title": "質疑応答・ディスカッション"
+      "timestamp": "15:44",
+      "title": "チャプター 7"
     },
     {
-      "timestamp": "22:25",
-      "title": "質疑応答・ディスカッション"
+      "timestamp": "17:47",
+      "title": "4. これまでの議論の振り返り (20分) ~15:40"
     },
     {
-      "timestamp": "24:25",
-      "title": "まとめ・次回予定"
+      "timestamp": "19:50",
+      "title": "チャプター 9"
     },
     {
-      "timestamp": "29:27",
-      "title": "議題4：デモ・実演"
+      "timestamp": "23:05",
+      "title": "生成AI活用の全体像"
     },
     {
-      "timestamp": "33:05",
-      "title": "まとめ・次回予定"
+      "timestamp": "31:02",
+      "title": "4. 今後の取組み予定"
     },
     {
-      "timestamp": "36:29",
-      "title": "まとめ・次回予定"
+      "timestamp": "39:05",
+      "title": "～生成AI関連 取組状況のまとめ～"
     },
     {
-      "timestamp": "46:38",
-      "title": "まとめ・次回予定"
+      "timestamp": "48:02",
+      "title": "4. 今後の取組み予定"
     },
     {
-      "timestamp": "49:17",
-      "title": "まとめ・次回予定"
-    },
-    {
-      "timestamp": "51:18",
-      "title": "まとめ・次回予定"
+      "timestamp": "52:08",
+      "title": "ありがとうございました"
     }
   ]
 }
