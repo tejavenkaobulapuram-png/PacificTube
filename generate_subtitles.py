@@ -392,10 +392,6 @@ def main():
         print("❌ Video ID is required")
         return
     
-    # Construct video URL
-    container_url = f"https://{storage_account}.blob.core.windows.net/videos"
-    video_url = f"{container_url}/{quote(video_id)}?{blob_sas}"
-    
     # Ask for languages
     print("\nAvailable languages:")
     print("  ja-JP = Japanese")
@@ -410,7 +406,7 @@ def main():
         languages = ['ja-JP']  # Default to Japanese
     
     # Process video
-    generator.process_video(video_id, video_url, languages)
+    generator.process_video(video_id, languages)
 
 
 if __name__ == '__main__':
