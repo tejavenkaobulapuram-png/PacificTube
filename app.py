@@ -33,6 +33,22 @@ class VideoService:
         self.blob_service_client = BlobServiceClient(account_url=sas_url)
         self.container_client = self.blob_service_client.get_container_client(config.CONTAINER_NAME)
         self.view_tracker = view_tracker
+        
+        # Load video metadata (uploader information)
+        self.metadata = self._load_metadata()
+    
+    def _load_metadata(self):
+        """Load video metadata from JSON file"""
+        import json
+        metadata_file = 'video_metadata.json'
+        if os.path.exists(metadata_file):
+            try:
+                with open(metadata_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"Error loading metadata: {e}")
+                return {}
+        return {}
     
     def get_videos(self):
         """Fetch all video files from blob storage"""
@@ -52,6 +68,9 @@ class VideoService:
                     # Construct video URL with SAS token
                     video_url = f"{config.CONTAINER_URL}/{quote(blob.name)}?{config.SAS_TOKEN}"
                     
+                    # Get uploader from metadata
+                    uploader = self.metadata.get(blob.name, {}).get('uploader', '不明')
+                    
                     video_data = {
                         'id': blob.name,
                         'name': display_name,
@@ -60,7 +79,8 @@ class VideoService:
                         'lastModified': blob.last_modified.isoformat() if blob.last_modified else None,
                         'contentType': blob.content_settings.content_type if blob.content_settings else 'video/mp4',
                         'folder': blob.name.rsplit('/', 1)[0] if '/' in blob.name else '',
-                        'views': self.view_tracker.get_view_count(blob.name)
+                        'views': self.view_tracker.get_view_count(blob.name),
+                        'uploader': uploader
                     }
                     videos.append(video_data)
             
