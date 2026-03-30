@@ -3,12 +3,17 @@
 let allVideos = [];
 let filteredVideos = [];
 let currentFolder = null;
+let currentQuery = '';
+let currentSort = 'relevance';
+let selectedUploaders = new Set();
+let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadFolders();
     loadVideos();
     setupSearchListener();
+    setupSearchHistory();
 });
 
 // Load folder structure from API
@@ -259,9 +264,18 @@ function createVideoCard(video) {
         </div>
     `;
 
+    // Highlight matching text in title
+    const highlightedTitle = currentQuery ? highlightText(video.name, currentQuery) : escapeHtml(video.name);
+    
+    // Add badge if found in subtitles
+    const subtitleBadge = video._foundInSubtitles 
+        ? '<span class="subtitle-match-badge">字幕で見つかりました</span>' 
+        : '';
+
     const info = `
         <div class="video-info">
-            <h3 class="video-title">${escapeHtml(video.name)}</h3>
+            <h3 class="video-title">${highlightedTitle}</h3>
+            ${subtitleBadge}
             <div class="video-meta">
                 <span class="meta-item">
                     <svg class="meta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -515,8 +529,41 @@ function selectSubtitle(index) {
 // Setup search listener
 function setupSearchListener() {
     const searchInput = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    let searchTimeout = null;
+    
+    // Show/hide clear button
     searchInput.addEventListener('input', (e) => {
+        clearBtn.style.display = e.target.value ? 'flex' : 'none';
+    });
+    
+    // Focus: show search history
+    searchInput.addEventListener('focus', () => {
+        if (!searchInput.value && searchHistory.length > 0) {
+            showSearchHistory();
+        }
+    });
+    
+    // Click outside: hide search history
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('searchHistoryDropdown');
+        const searchContainer = document.querySelector('.search-container');
+        if (!searchContainer.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+    
+    searchInput.addEventListener('input', async (e) => {
         const query = e.target.value.toLowerCase().trim();
+        currentQuery = query;
+
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+
+        // Hide search history when typing
+        document.getElementById('searchHistoryDropdown').style.display = 'none';
 
         // Start with videos in current folder (or all if no folder selected)
         let baseVideos = currentFolder 
@@ -525,25 +572,260 @@ function setupSearchListener() {
 
         if (query === '') {
             filteredVideos = baseVideos;
-        } else {
-            filteredVideos = baseVideos.filter(video =>
-                video.name.toLowerCase().includes(query)
-            );
+            displayVideos(filteredVideos);
+            document.getElementById('empty').style.display = 'none';
+            document.getElementById('searchFiltersBar').style.display = 'none';
+            return;
         }
 
-        displayVideos(filteredVideos);
+        // Add to search history
+        addToSearchHistory(query);
 
-        // Show empty state if no results
+        // Search in title, uploader, and description (immediate)
+        let matchedVideos = baseVideos.filter(video => {
+            const nameMatch = video.name.toLowerCase().includes(query);
+            const uploaderMatch = video.uploader && video.uploader.toLowerCase().includes(query);
+            const descriptionMatch = video.description && video.description.toLowerCase().includes(query);
+            return nameMatch || uploaderMatch || descriptionMatch;
+        });
+
+        // Display immediate results
+        filteredVideos = matchedVideos;
+        displayVideos(filteredVideos);
+        updateSearchResultInfo(query, false); // false = still searching subtitles
+        setupUploaderFilters();
+
+        // Show "searching subtitles" indicator
+        const resultCount = document.getElementById('searchResultCount');
+        const originalText = resultCount.textContent;
+        resultCount.innerHTML = `${originalText} <span style="color: #666; font-size: 12px;">(字幕を検索中...)</span>`;
+
+        // Debounce subtitle search (wait 300ms after user stops typing)
+        searchTimeout = setTimeout(async () => {
+            try {
+                // Search in subtitles via API
+                const response = await fetch(`/api/search/subtitles?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (data.success && data.results.length > 0) {
+                    // Add videos found in subtitles that aren't already in results
+                    const subtitleVideoIds = data.results.map(r => r.video_id);
+                    const additionalVideos = baseVideos.filter(video => 
+                        subtitleVideoIds.includes(video.id) && !matchedVideos.find(v => v.id === video.id)
+                    );
+                    
+                    if (additionalVideos.length > 0) {
+                        // Mark these as found in subtitles
+                        additionalVideos.forEach(v => v._foundInSubtitles = true);
+                        filteredVideos = [...matchedVideos, ...additionalVideos];
+                        displayVideos(filteredVideos);
+                        updateSearchResultInfo(query, true, additionalVideos.length);
+                        setupUploaderFilters();
+                        // Hide empty state since we found results
+                        document.getElementById('empty').style.display = 'none';
+                    } else {
+                        // No additional results from subtitles
+                        updateSearchResultInfo(query, true, 0);
+                    }
+                } else {
+                    // No subtitle matches
+                    updateSearchResultInfo(query, true, 0);
+                }
+                
+                // Check if we should show empty state AFTER subtitle search completes
+                const empty = document.getElementById('empty');
+                const videoGrid = document.getElementById('videoGrid');
+                if (filteredVideos.length === 0 && allVideos.length > 0) {
+                    videoGrid.innerHTML = '';
+                    empty.style.display = 'block';
+                    empty.textContent = `ℹ️ "${query}" に一致する動画が見つかりませんでした。タイトル、説明、アップロード者、字幕の内容を検索しました。`;
+                    document.getElementById('searchFiltersBar').style.display = 'none';
+                } else {
+                    empty.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Subtitle search error:', error);
+                updateSearchResultInfo(query, true, 0);
+                
+                // Check empty state even on error
+                const empty = document.getElementById('empty');
+                if (filteredVideos.length === 0 && allVideos.length > 0) {
+                    empty.style.display = 'block';
+                    empty.textContent = `ℹ️ "${query}" に一致する動画が見つかりませんでした。タイトル、説明、アップロード者、字幕の内容を検索しました。`;
+                    document.getElementById('searchFiltersBar').style.display = 'none';
+                }
+            }
+        }, 300); // Reduced from 500ms to 300ms for faster response
+
+        // Don't show empty state immediately - wait for subtitle search to complete
+        // Just hide it for now if there are immediate results
         const empty = document.getElementById('empty');
-        const videoGrid = document.getElementById('videoGrid');
-        if (filteredVideos.length === 0 && allVideos.length > 0) {
-            videoGrid.innerHTML = '';
-            empty.style.display = 'block';
-            empty.textContent = `ℹ️ "${query}" に一致する動画が見つかりませんでした。`;
-        } else {
+        if (matchedVideos.length > 0) {
             empty.style.display = 'none';
         }
     });
+}
+
+// Clear search
+function clearSearch() {
+    const searchInput = document.getElementById('searchInput');
+    searchInput.value = '';
+    searchInput.focus();
+    currentQuery = '';
+    document.getElementById('clearSearchBtn').style.display = 'none';
+    document.getElementById('searchFiltersBar').style.display = 'none';
+    filteredVideos = currentFolder 
+        ? allVideos.filter(video => video.folder === currentFolder)
+        : allVideos;
+    displayVideos(filteredVideos);
+    document.getElementById('empty').style.display = 'none';
+}
+
+// Search history functions
+function setupSearchHistory() {
+    // Load from localStorage on init
+    searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+}
+
+function addToSearchHistory(query) {
+    if (!query || query.length < 2) return;
+    
+    // Remove if already exists
+    searchHistory = searchHistory.filter(item => item !== query);
+    
+    // Add to beginning
+    searchHistory.unshift(query);
+    
+    // Keep only last 10
+    searchHistory = searchHistory.slice(0, 10);
+    
+    // Save to localStorage
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+}
+
+function showSearchHistory() {
+    const dropdown = document.getElementById('searchHistoryDropdown');
+    const listDiv = document.getElementById('searchHistoryList');
+    
+    if (searchHistory.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+    }
+    
+    listDiv.innerHTML = searchHistory.map(query => `
+        <div class="search-history-item" onclick="applySearchHistory('${escapeHtml(query)}')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+            </svg>
+            <span>${escapeHtml(query)}</span>
+            <button onclick="event.stopPropagation(); removeFromSearchHistory('${escapeHtml(query)}')">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+    
+    dropdown.style.display = 'block';
+}
+
+function applySearchHistory(query) {
+    const searchInput = document.getElementById('searchInput');
+    searchInput.value = query;
+    searchInput.dispatchEvent(new Event('input'));
+    document.getElementById('searchHistoryDropdown').style.display = 'none';
+}
+
+function removeFromSearchHistory(query) {
+    searchHistory = searchHistory.filter(item => item !== query);
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+    showSearchHistory();
+}
+
+// Update search result info
+function updateSearchResultInfo(query, subtitleSearchComplete = false, subtitleResults = 0) {
+    const resultCount = document.getElementById('searchResultCount');
+    const filtersBar = document.getElementById('searchFiltersBar');
+    
+    if (query) {
+        const count = filteredVideos.length;
+        let message = `"${query}" の検索結果: ${count}件`;
+        
+        if (subtitleSearchComplete && subtitleResults > 0) {
+            message += ` <span style="color: #00CED1; font-size: 12px;">(字幕から${subtitleResults}件)</span>`;
+        }
+        
+        resultCount.innerHTML = message;
+        filtersBar.style.display = 'flex';
+    } else {
+        filtersBar.style.display = 'none';
+    }
+}
+
+// Setup uploader filters
+function setupUploaderFilters() {
+    const uploaderFiltersDiv = document.getElementById('uploaderFilters');
+    
+    // Get unique uploaders from filtered videos
+    const uploaderCounts = {};
+    filteredVideos.forEach(video => {
+        const uploader = video.uploader || '不明';
+        uploaderCounts[uploader] = (uploaderCounts[uploader] || 0) + 1;
+    });
+    
+    // Create filter pills
+    uploaderFiltersDiv.innerHTML = Object.entries(uploaderCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([uploader, count]) => `
+            <div class="uploader-filter-pill ${selectedUploaders.has(uploader) ? 'active' : ''}" 
+                 onclick="toggleUploaderFilter('${escapeHtml(uploader)}')">
+                ${escapeHtml(uploader)}
+                <span class="count">(${count})</span>
+            </div>
+        `).join('');
+}
+
+function toggleUploaderFilter(uploader) {
+    if (selectedUploaders.has(uploader)) {
+        selectedUploaders.delete(uploader);
+    } else {
+        selectedUploaders.add(uploader);
+    }
+    applySortAndFilter();
+}
+
+// Apply sort and filter
+function applySortAndFilter() {
+    const sortSelect = document.getElementById('sortSelect');
+    currentSort = sortSelect.value;
+    
+    // Start with current search results
+    let videos = [...filteredVideos];
+    
+    // Apply uploader filter
+    if (selectedUploaders.size > 0) {
+        videos = videos.filter(video => selectedUploaders.has(video.uploader || '不明'));
+    }
+    
+    // Apply sort
+    switch (currentSort) {
+        case 'date':
+            videos.sort((a, b) => (b.lastModified || '').localeCompare(a.lastModified || ''));
+            break;
+        case 'views':
+            videos.sort((a, b) => (b.views || 0) - (a.views || 0));
+            break;
+        case 'title':
+            videos.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+            break;
+        case 'relevance':
+        default:
+            // Keep original search relevance order
+            break;
+    }
+    
+    displayVideos(videos);
+    setupUploaderFilters(); // Refresh filter pills
 }
 
 // Utility: Format file size
@@ -973,6 +1255,18 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Utility: Highlight matching text
+function highlightText(text, query) {
+    if (!query || !text) return escapeHtml(text);
+    
+    const escapedText = escapeHtml(text);
+    const escapedQuery = escapeHtml(query);
+    
+    // Case-insensitive search
+    const regex = new RegExp(`(${escapedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return escapedText.replace(regex, '<span class="highlight">$1</span>');
 }
 
 // Close modal with Escape key

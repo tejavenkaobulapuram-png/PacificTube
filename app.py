@@ -68,8 +68,10 @@ class VideoService:
                     # Construct video URL with SAS token
                     video_url = f"{config.CONTAINER_URL}/{quote(blob.name)}?{config.SAS_TOKEN}"
                     
-                    # Get uploader from metadata
-                    uploader = self.metadata.get(blob.name, {}).get('uploader', '不明')
+                    # Get uploader and description from metadata
+                    metadata = self.metadata.get(blob.name, {})
+                    uploader = metadata.get('uploader', '不明')
+                    description = metadata.get('description', '')
                     
                     video_data = {
                         'id': blob.name,
@@ -80,7 +82,8 @@ class VideoService:
                         'contentType': blob.content_settings.content_type if blob.content_settings else 'video/mp4',
                         'folder': blob.name.rsplit('/', 1)[0] if '/' in blob.name else '',
                         'views': self.view_tracker.get_view_count(blob.name),
-                        'uploader': uploader
+                        'uploader': uploader,
+                        'description': description
                     }
                     videos.append(video_data)
             
@@ -399,6 +402,75 @@ class VideoService:
         else:
             return 0
     
+    def search_subtitles(self, query):
+        """Search for videos by subtitle content
+        
+        Args:
+            query: Search string to find in subtitles
+            
+        Returns:
+            List of video IDs that contain the query in their subtitles
+        """
+        if not query or len(query.strip()) == 0:
+            return []
+        
+        query = query.lower().strip()
+        matching_videos = []
+        
+        try:
+            # Get all video files
+            videos = self.get_videos()
+            print(f"🔍 Searching subtitles for '{query}' across {len(videos)} videos...")
+            
+            for video in videos:
+                video_id = video['id']
+                video_base = video_id.rsplit('.', 1)[0] if '.' in video_id else video_id
+                
+                # Check all possible subtitle files (ja, en, etc.)
+                subtitle_patterns = [
+                    f"{video_base}.ja.vtt",      # Japanese subtitles
+                    f"{video_base}.en.vtt",      # English subtitles
+                    f"{video_base}.ja-JP.vtt",   # Alternative Japanese format
+                    f"{video_base}.en-US.vtt",   # Alternative English format
+                    f"{video_base}.vtt"          # Default subtitles
+                ]
+                
+                found_match = False
+                for subtitle_blob_name in subtitle_patterns:
+                    if found_match:
+                        break
+                        
+                    try:
+                        blob_client = self.container_client.get_blob_client(subtitle_blob_name)
+                        subtitle_content = blob_client.download_blob().readall().decode('utf-8')
+                        
+                        # Remove spaces from subtitle content (Japanese transcription often has spaces between characters)
+                        subtitle_content_normalized = subtitle_content.replace(' ', '').replace('　', '')  # Remove both space and full-width space
+                        query_normalized = query.replace(' ', '').replace('　', '')
+                        
+                        # Search in subtitle content (case-insensitive, space-insensitive)
+                        if query_normalized in subtitle_content_normalized.lower():
+                            print(f"✅ Found '{query}' in {subtitle_blob_name}")
+                            matching_videos.append({
+                                'video_id': video_id,
+                                'video_name': video['name'],
+                                'uploader': video.get('uploader', '不明')
+                            })
+                            found_match = True
+                        else:
+                            print(f"❌ Not found in {subtitle_blob_name} (checked {len(subtitle_content)} chars)")
+                    except Exception as e:
+                        # Subtitle file doesn't exist, try next pattern
+                        print(f"⚠️  No subtitle file: {subtitle_blob_name} ({str(e)[:50]})")
+                        continue
+            
+            print(f"📊 Total matches found: {len(matching_videos)}")
+        
+        except Exception as e:
+            print(f"Error searching subtitles: {e}")
+        
+        return matching_videos
+    
     def _folders_to_list(self, folders_dict):
         """Convert folder dict to list format"""
         result = []
@@ -535,6 +607,32 @@ def increment_view(video_id):
             'success': True,
             'video_id': video_id,
             'views': new_count
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/search/subtitles')
+def search_subtitles():
+    """API endpoint to search videos by subtitle content"""
+    try:
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({
+                'success': True,
+                'results': [],
+                'count': 0
+            })
+        
+        results = video_service.search_subtitles(query)
+        return jsonify({
+            'success': True,
+            'results': results,
+            'count': len(results),
+            'query': query
         })
     except Exception as e:
         return jsonify({

@@ -17,12 +17,22 @@
         </div>
         <div class="header-center">
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-box" placeholder="動画を検索...">
+                <input type="text" id="searchInput" class="search-box" placeholder="動画を検索..." autocomplete="off">
+                <button class="clear-search-btn" id="clearSearchBtn" style="display: none;" onclick="clearSearch()">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
                 <button class="search-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
                     </svg>
                 </button>
+                <!-- Search History Dropdown -->
+                <div class="search-history-dropdown" id="searchHistoryDropdown" style="display: none;">
+                    <div class="search-history-header">最近の検索</div>
+                    <div id="searchHistoryList"></div>
+                </div>
             </div>
         </div>
         <div class="header-right">
@@ -58,6 +68,28 @@
         <!-- Main Content Area -->
         <div class="content-area">
             <div class="container">
+        <!-- Search Filters Bar -->
+        <div id="searchFiltersBar" class="search-filters-bar" style="display: none;">
+            <div class="search-result-info">
+                <span id="searchResultCount"></span>
+            </div>
+            <div class="search-filters">
+                <div class="filter-group">
+                    <label>並び替え:</label>
+                    <select id="sortSelect" class="sort-select" onchange="applySortAndFilter()">
+                        <option value="relevance">関連度</option>
+                        <option value="date">日付順</option>
+                        <option value="views">視聴回数</option>
+                        <option value="title">タイトル順</option>
+                    </select>
+                </div>
+                <div class="filter-group" id="uploaderFilterGroup">
+                    <label>アップロード者:</label>
+                    <div id="uploaderFilters" class="uploader-filters"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Loading State -->
         <div id="loading" class="loading-container">
             <div class="spinner"></div>
