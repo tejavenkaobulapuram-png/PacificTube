@@ -264,8 +264,9 @@ function createVideoCard(video) {
         </div>
     `;
 
-    // Highlight matching text in title
+    // Highlight matching text in title and uploader
     const highlightedTitle = currentQuery ? highlightText(video.name, currentQuery) : escapeHtml(video.name);
+    const highlightedUploader = currentQuery ? highlightText(video.uploader || '不明', currentQuery) : escapeHtml(video.uploader || '不明');
     
     // Add badge if found in subtitles
     const subtitleBadge = video._foundInSubtitles 
@@ -287,7 +288,7 @@ function createVideoCard(video) {
                     <svg class="meta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                     </svg>
-                    ${escapeHtml(video.uploader || '不明')}
+                    ${highlightedUploader}
                 </span>
                 <span class="meta-item">
                     <svg class="meta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">

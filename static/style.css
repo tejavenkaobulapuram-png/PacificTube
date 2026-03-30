@@ -1059,7 +1059,7 @@ body {
 /* Related Videos Sidebar */
 .related-videos-sidebar {
     width: 360px;
-    background-color: #17A2B8;
+    background-color: #AFEEEE;
     border-radius: 12px;
     overflow-y: auto;
     flex-shrink: 0;
@@ -1074,7 +1074,7 @@ body {
     border-bottom: 1px solid #40E0D0;
     position: sticky;
     top: 0;
-    background-color: #17A2B8;
+    background-color: #AFEEEE;
     z-index: 1;
 }
 
@@ -1139,7 +1139,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #40E0D0 0%, #17A2B8 100%);
+    background: linear-gradient(135deg, #40E0D0 0%, #AFEEEE 100%);
 }
 
 .related-video-thumbnail .thumbnail-placeholder svg {
