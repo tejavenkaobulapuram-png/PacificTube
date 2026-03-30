@@ -5,7 +5,10 @@ Uses Azure OpenAI GPT-4o for high-quality conversation translation
 """
 
 import os
+import re
 import time
+import json
+import httpx
 from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient, ContentSettings
 from openai import AzureOpenAI
@@ -33,75 +36,179 @@ class GPT4oSubtitleTranslator:
         self.blob_service = BlobServiceClient(account_url=f"{account_url}?{SAS_TOKEN}")
         self.container_client = self.blob_service.get_container_client(CONTAINER_NAME)
         
-        # Azure OpenAI
+        # Azure OpenAI with timeout to prevent hanging
         self.openai_client = AzureOpenAI(
             api_key=OPENAI_KEY,
             api_version=OPENAI_API_VERSION,
-            azure_endpoint=OPENAI_ENDPOINT
+            azure_endpoint=OPENAI_ENDPOINT,
+            timeout=httpx.Timeout(60.0, connect=10.0)  # 60 sec total, 10 sec connect
         )
         
         print(f"✅ Connected to Azure Storage: {STORAGE_ACCOUNT}")
         print(f"✅ GPT-4o ready: {OPENAI_DEPLOYMENT}")
     
-    def translate_with_gpt4o(self, japanese_texts, batch_size=30):
+    def translate_single_line(self, japanese_text, context_before="", context_after=""):
+        """Translate a single line using GPT-4o with context (fallback for problematic segments)"""
+        try:
+            # Provide context to avoid content filter issues
+            context_prompt = "Translate this Japanese business meeting subtitle to English:\n\n"
+            if context_before:
+                context_prompt += f"Previous line: {context_before}\n"
+            context_prompt += f"Current line: {japanese_text}\n"
+            if context_after:
+                context_prompt += f"Next line: {context_after}\n"
+            context_prompt += "\nReturn ONLY the English translation of the current line:"
+            
+            response = self.openai_client.chat.completions.create(
+                model=OPENAI_DEPLOYMENT,
+                messages=[
+                    {"role": "system", "content": "You are a professional Japanese-English subtitle translator for business meetings. You are translating meeting subtitles."},
+                    {"role": "user", "content": context_prompt}
+                ],
+                temperature=0.3,
+                max_tokens=200
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"      ⚠️ Single line translation failed: {str(e)[:100]}")
+            # Last resort: return a safe fallback
+            return f"[Translation error]"
+    
+    def translate_with_gpt4o(self, japanese_texts, batch_size=20, max_retries=2):
         """
-        Translate Japanese subtitle texts to English using GPT-4o
-        Processes in batches with full conversation context
+        Translate Japanese subtitle texts to English using GPT-4o with JSON output
+        Uses structured JSON format to guarantee exact line count matching
         """
         all_translations = []
         total_batches = (len(japanese_texts) + batch_size - 1) // batch_size
         
         for batch_idx in range(0, len(japanese_texts), batch_size):
             batch = japanese_texts[batch_idx:batch_idx + batch_size]
+            batch_num = batch_idx // batch_size + 1
             
-            # Build prompt with conversation context
-            prompt = """You are a professional Japanese-to-English subtitle translator for business meeting recordings.
+            # Build prompt with JSON format requirement - use numbered keys for clarity
+            prompt = f"""Translate {len(batch)} Japanese meeting subtitle lines to English.
 
-Translate the following Japanese subtitle lines into natural English. These are from a recorded business meeting.
+Return a JSON object with "translations" as an array containing exactly {len(batch)} strings (the English translations).
 
-IMPORTANT RULES:
-1. Translate conversational phrases accurately (e.g., "ありがとうございます" = "Thank you")
-2. Maintain the natural flow of conversation
-3. Keep translations concise (suitable for subtitles)
-4. Preserve speaker intent and politeness
-5. Return ONLY the translated lines, one per line, in the same order
-6. Do NOT add numbers, labels, or extra formatting
-
-Japanese subtitle lines:
----
+Japanese lines to translate:
 """
-            prompt += "\n".join(batch)
-            prompt += "\n---\n\nEnglish translations:"
+            for i, text in enumerate(batch):
+                prompt += f'{i+1}. "{text}"\n'
             
-            try:
-                response = self.openai_client.chat.completions.create(
-                    model=OPENAI_DEPLOYMENT,
-                    messages=[
-                        {"role": "system", "content": "You are a professional Japanese-English subtitle translator specializing in business meetings."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.3,  # Lower temperature for consistent  translation
-                    max_tokens=4000
-                )
-                
-                translation_text = response.choices[0].message.content.strip()
-                translations = [line.strip() for line in translation_text.split('\n') if line.strip()]
-                
-                # Match translations to original lines
-                for i in range(len(batch)):
-                    if i < len(translations):
-                        all_translations.append(translations[i])
-                    else:
-                        # Fallback: keep original if mismatch
-                        all_translations.append(batch[i])
-                
-                print(f"   ✓ Translated batch {batch_idx//batch_size + 1}/{total_batches} ({len(batch)} lines)")
-                time.sleep(0.5)  # Rate limiting
-                
-            except Exception as e:
-                print(f"   ❌ Error in batch {batch_idx//batch_size + 1}: {e}")
-                # Fallback: keep original text
-                all_translations.extend(batch)
+            prompt += f"""
+Example response format for 3 lines:
+{{"translations": ["Hello", "Thank you", "Goodbye"]}}
+
+IMPORTANT: Return exactly {len(batch)} translated strings in the "translations" array."""
+            
+            translated = False
+            for attempt in range(max_retries):
+                try:
+                    response = self.openai_client.chat.completions.create(
+                        model=OPENAI_DEPLOYMENT,
+                        messages=[
+                            {"role": "system", "content": "You are a Japanese-English subtitle translator. Return valid JSON with a 'translations' array containing English translations. Always return the exact number of translations requested."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.2,
+                        max_tokens=4000,
+                        response_format={"type": "json_object"}
+                    )
+                    
+                    response_text = response.choices[0].message.content.strip()
+                    
+                    # Parse JSON response
+                    try:
+                        parsed = json.loads(response_text)
+                        
+                        # Find the translations array - check multiple possible keys
+                        translations = None
+                        if isinstance(parsed, dict):
+                            for key in ['translations', 'items', 'results', 'english', 'output', 'data']:
+                                if key in parsed and isinstance(parsed[key], list):
+                                    translations = parsed[key]
+                                    break
+                            # If still not found, look for any list value
+                            if translations is None:
+                                for value in parsed.values():
+                                    if isinstance(value, list) and len(value) == len(batch):
+                                        translations = value
+                                        break
+                        elif isinstance(parsed, list):
+                            translations = parsed
+                        
+                        if translations is None:
+                            print(f"   ⚠️ Batch {batch_num}: No translations array found - retry {attempt+1}/{max_retries}")
+                            time.sleep(1)
+                            continue
+                        
+                        # Extract strings from the list (handle both plain strings and dicts)
+                        result = []
+                        for item in translations:
+                            if isinstance(item, str):
+                                result.append(item.strip())
+                            elif isinstance(item, dict):
+                                # Try various keys for the translation
+                                for k in ['english', 'translation', 'text', 'en', 'value']:
+                                    if k in item:
+                                        result.append(str(item[k]).strip())
+                                        break
+                                else:
+                                    # Just use first string value
+                                    for v in item.values():
+                                        if isinstance(v, str):
+                                            result.append(v.strip())
+                                            break
+                            else:
+                                result.append(str(item).strip())
+                        
+                        # Validate line count
+                        if len(result) == len(batch):
+                            all_translations.extend(result)
+                            print(f"   ✓ Batch {batch_num}/{total_batches} ({len(batch)} lines)")
+                            translated = True
+                            time.sleep(0.4)
+                            break
+                        else:
+                            print(f"   ⚠️ Batch {batch_num}: got {len(result)} lines, need {len(batch)} - retry {attempt+1}/{max_retries}")
+                            time.sleep(1)
+                    
+                    except json.JSONDecodeError as je:
+                        print(f"   ⚠️ Batch {batch_num} JSON parse error - retry {attempt+1}/{max_retries}")
+                        time.sleep(1)
+                    
+                    # Final fallback after retries
+                    if attempt == max_retries - 1 and not translated:
+                        print(f"   🔄 Line-by-line fallback for batch {batch_num}")
+                        for i, line in enumerate(batch):
+                            context_before = batch[i-1] if i > 0 else ""
+                            context_after = batch[i+1] if i < len(batch)-1 else ""
+                            translated_line = self.translate_single_line(line, context_before, context_after)
+                            all_translations.append(translated_line)
+                            time.sleep(0.2)
+                        translated = True
+                    
+                except Exception as e:
+                    print(f"   ❌ Batch {batch_num} error: {str(e)[:60]}")
+                    time.sleep(2)
+                    
+                    if attempt == max_retries - 1:
+                        print(f"   🔄 Emergency fallback for batch {batch_num}")
+                        for i, line in enumerate(batch):
+                            try:
+                                context_before = batch[i-1] if i > 0 else ""
+                                context_after = batch[i+1] if i < len(batch)-1 else ""
+                                translated_line = self.translate_single_line(line, context_before, context_after)
+                                all_translations.append(translated_line)
+                                time.sleep(0.2)
+                            except:
+                                all_translations.append("[Translation unavailable]")
+                        translated = True
+            
+            if not translated:
+                print(f"   ⚠️ Batch {batch_num} failed - using placeholders")
+                all_translations.extend(["[Translation error]"] * len(batch))
         
         return all_translations
     
