@@ -692,7 +692,7 @@ body {
 }
 
 .video-modal-content {
-    background-color: #17A2B8;
+    background-color: #AFEEEE;
     border-radius: 12px;
     max-width: 1200px;
     width: 100%;
@@ -772,12 +772,12 @@ body {
 
 .cc-button:hover {
     background-color: rgba(255, 255, 255, 0.2);
-    border-color: #87CEEB;
+    border-color: #40E0D0;
 }
 
 .cc-button.active {
-    background-color: #065fd4;
-    border-color: #065fd4;
+    background-color: #20B2AA;
+    border-color: #20B2AA;
 }
 
 .cc-button svg {
@@ -814,11 +814,11 @@ body {
 }
 
 .subtitle-option:hover {
-    background-color: rgba(135, 206, 235, 0.3);
+    background-color: rgba(64, 224, 208, 0.3);
 }
 
 .subtitle-option.active {
-    background-color: #065fd4;
+    background-color: #20B2AA;
     font-weight: 600;
 }
 
