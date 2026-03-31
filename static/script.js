@@ -329,6 +329,51 @@ function openModal(video) {
     window.currentVideoId = video.id;
     window.currentVideo = video;
     
+    // Prevent video from capturing keyboard focus (critical!)
+    player.setAttribute('tabindex', '-1');
+    
+    // Remove any existing keyboard listeners first (prevent duplicates)
+    window.removeEventListener('keydown', handleVideoKeyboard, true);
+    document.removeEventListener('keydown', handleVideoKeyboard, true);
+    player.removeEventListener('keydown', handleVideoKeyboard, true);
+    
+    // Add keyboard event listener at WINDOW level (catches everything)
+    window.addEventListener('keydown', handleVideoKeyboard, true);
+    document.addEventListener('keydown', handleVideoKeyboard, true);
+    player.addEventListener('keydown', handleVideoKeyboard, true);
+    
+    console.log('✅ Keyboard listeners attached');
+    
+    // Reset seek state when video loads
+    seekAccumulator = 0;
+    seekDirection = null;
+    lastSeekTime = 0;
+    isProgrammaticSeek = false;
+    
+    // Reset seek state AND blur video when user manually seeks (clicks timeline)
+    player.addEventListener('seeking', function() {
+        // Only reset if this is a MANUAL seek (user clicked timeline), not programmatic
+        if (isProgrammaticSeek) {
+            console.log('⚙️ Programmatic seek - keeping accumulator');
+            return; // Don't reset accumulator for our own seeks
+        }
+        
+        console.log('📍 Manual seek detected - resetting state');
+        seekAccumulator = 0;
+        seekDirection = null;
+        lastSeekTime = 0; // Reset throttle timer
+        
+        // CRITICAL: Remove focus from video to prevent native controls
+        player.blur();
+        document.activeElement.blur();
+        
+        const indicator = document.getElementById('seekIndicator');
+        if (indicator) {
+            indicator.classList.remove('show');
+            indicator.style.display = 'none';
+        }
+    });
+    
     // Reset engagement button states (prevent stuck locks)
     isLikeProcessing = false;
     isDislikeProcessing = false;
@@ -404,6 +449,125 @@ function closeModal() {
     // Remove all subtitle tracks
     const tracks = player.querySelectorAll('track');
     tracks.forEach(track => track.remove());
+    
+    // Remove keyboard listeners at all levels
+    window.removeEventListener('keydown', handleVideoKeyboard, true);
+    document.removeEventListener('keydown', handleVideoKeyboard, true);
+    player.removeEventListener('keydown', handleVideoKeyboard, true);
+    
+    console.log('🔒 Keyboard listeners removed');
+}
+
+// ==========================================
+// YOUTUBE-STYLE SEEK FEATURE
+// ==========================================
+
+let seekAccumulator = 0;
+let seekTimeout = null;
+let seekDirection = null;
+let lastSeekTime = 0;
+let isProgrammaticSeek = false; // Flag to distinguish programmatic vs manual seeks
+
+// Handle keyboard shortcuts for video player (COMBINED: block native + custom seek)
+function handleVideoKeyboard(event) {
+    const modal = document.getElementById('videoModal');
+    const player = document.getElementById('videoPlayer');
+    
+    // Only handle if modal is open and not typing in input field
+    if (modal.style.display !== 'flex' || event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+    }
+    
+    // Only intercept arrow keys (let other keys work normally)
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+        return;
+    }
+    
+    console.log('🎯 Handling arrow key:', event.key);
+    
+    // CRITICAL: Aggressively prevent native video controls
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    console.log('🛑 Blocked native control');
+    
+    // Arrow Right: Forward 5 seconds
+    if (event.key === 'ArrowRight') {
+        seekVideo(5);
+        return false;
+    }
+    // Arrow Left: Backward 5 seconds
+    else if (event.key === 'ArrowLeft') {
+        seekVideo(-5);
+        return false;
+    }
+}
+
+// Seek video and show visual feedback
+function seekVideo(seconds) {
+    const player = document.getElementById('videoPlayer');
+    const indicator = document.getElementById('seekIndicator');
+    
+    if (!player || !indicator) {
+        console.error('Missing elements - player:', !!player, 'indicator:', !!indicator);
+        return;
+    }
+    
+    // Determine direction
+    const isForward = seconds > 0;
+    const currentDirection = isForward ? 'forward' : 'backward';
+    
+    // Reset accumulator if direction changed
+    if (seekDirection !== null && seekDirection !== currentDirection) {
+        console.log('Direction changed, resetting accumulator');
+        seekAccumulator = 0;
+    }
+    
+    seekDirection = currentDirection;
+    
+    // ALWAYS accumulate (NO throttle for accumulation)
+    seekAccumulator += Math.abs(seconds);
+    console.log(`Accumulator: ${seekAccumulator} (added ${Math.abs(seconds)})`);
+    
+    // Set flag BEFORE seeking to indicate this is programmatic
+    isProgrammaticSeek = true;
+    
+    // Seek the video
+    const newTime = Math.max(0, Math.min(player.duration, player.currentTime + seconds));
+    player.currentTime = newTime;
+    console.log(`✅ Seeking to ${newTime.toFixed(2)}s`);
+    
+    // Reset flag after a short delay
+    setTimeout(() => {
+        isProgrammaticSeek = false;
+    }, 10);
+    
+    // Update indicator (YouTube style with arrows) - ALWAYS update
+    if (isForward) {
+        indicator.textContent = `+${seekAccumulator} ►`;
+    } else {
+        indicator.textContent = `◄ -${seekAccumulator}`;
+    }
+    indicator.className = `seek-indicator show ${currentDirection}`;
+    indicator.style.display = 'block';
+    indicator.style.opacity = '1';
+    
+    console.log(`📺 Display: "${indicator.textContent}"`);
+    
+    // Clear existing timeout
+    if (seekTimeout) {
+        clearTimeout(seekTimeout);
+    }
+    
+    // Hide indicator after 1 second of no activity
+    seekTimeout = setTimeout(() => {
+        console.log('Timeout: Resetting accumulator');
+        indicator.classList.remove('show');
+        indicator.style.display = 'none';
+        indicator.style.opacity = '0';
+        seekAccumulator = 0;
+        seekDirection = null;
+    }, 1000);
 }
 
 // Global variable to store available subtitles

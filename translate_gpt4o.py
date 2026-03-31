@@ -261,6 +261,13 @@ IMPORTANT: Return exactly {len(batch)} translated strings in the "translations" 
         try:
             print(f"\n📝 Processing: {ja_blob_name}")
             
+            # Check if English version already exists
+            en_blob_name = ja_blob_name.replace('.ja.vtt', '.en.vtt')
+            en_blob_client = self.container_client.get_blob_client(en_blob_name)
+            if en_blob_client.exists():
+                print(f"   ⏭️  Already translated, skipping")
+                return True
+            
             # Download Japanese subtitle
             blob_client = self.container_client.get_blob_client(ja_blob_name)
             ja_content = blob_client.download_blob().readall().decode('utf-8')

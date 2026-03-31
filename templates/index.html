@@ -10,9 +10,7 @@
     <!-- Header -->
     <header class="header">
         <div class="header-left">
-            <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z" />
-            </svg>
+            <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Pacific Tube Logo">
             <h1 class="title">Pacific Tube</h1>
         </div>
         <div class="header-center">
@@ -127,6 +125,8 @@
                     </button>
                 </div>
                 <div class="video-modal-player">
+                    <!-- Seek Indicator inside video container -->
+                    <div id="seekIndicator" class="seek-indicator"></div>
                     <video id="videoPlayer" controls autoplay crossorigin="anonymous"></video>
                     <!-- Custom CC Button -->
                     <div class="subtitle-controls">

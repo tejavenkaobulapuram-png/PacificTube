@@ -33,15 +33,15 @@ body {
 }
 
 .logo {
-    width: 32px;
-    height: 32px;
-    color: #ff0000;
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
 }
 
 .title {
     font-size: 24px;
     font-weight: 700;
-    color: #ffffff;
+    color: #1E90FF;
 }
 
 .header-center {
@@ -739,12 +739,59 @@ body {
 .video-modal-player {
     background-color: #000000;
     position: relative;
+    overflow: visible;
 }
 
 .video-modal-player video {
     width: 100%;
     max-height: 70vh;
     display: block;
+    position: relative;
+    z-index: 1;
+}
+
+/* Seek Indicator Overlay */
+.seek-indicator {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 56px;
+    font-weight: 700;
+    color: #ffffff;
+    background-color: rgba(0, 0, 0, 0.75);
+    padding: 20px 35px;
+    border-radius: 10px;
+    pointer-events: none;
+    opacity: 0;
+    display: none;
+    z-index: 100;
+    text-shadow: 0 3px 6px rgba(0, 0, 0, 1);
+    letter-spacing: 2px;
+}
+
+.seek-indicator.show {
+    opacity: 1 !important;
+    display: block !important;
+    animation: fadeInScale 0.2s ease !important;
+}
+
+@keyframes fadeInScale {
+    from { 
+        opacity: 0; 
+        transform: translateY(-50%) scale(0.8); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(-50%) scale(1); 
+    }
+}
+
+.seek-indicator.forward {
+    right: 60px;
+}
+
+.seek-indicator.backward {
+    left: 60px;
 }
 
 /* Subtitle Controls */
