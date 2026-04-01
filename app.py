@@ -19,9 +19,15 @@ import os
 import io
 import requests
 import secrets
+import time
+from collections import defaultdict
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
+
+# Rate limiting for like/dislike to prevent double-clicks
+# Store last request time per user+video+action
+rate_limit_store = defaultdict(float)
 
 
 class VideoService:
@@ -841,6 +847,23 @@ def get_engagement(video_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+def check_rate_limit(user_id, video_id, action_type, min_seconds=2):
+    """
+    Check if user is rate limited for this action.
+    Returns True if allowed, False if too soon.
+    """
+    key = f"{user_id}_{video_id}_{action_type}"
+    current_time = time.time()
+    last_time = rate_limit_store.get(key, 0)
+    
+    if current_time - last_time < min_seconds:
+        print(f"⚠️ Rate limit: {action_type} rejected (too soon: {current_time - last_time:.2f}s)")
+        return False
+    
+    rate_limit_store[key] = current_time
+    return True
+
+
 @app.route('/api/like/<path:video_id>', methods=['POST'])
 def toggle_like(video_id):
     """Toggle like for a video"""
@@ -849,6 +872,14 @@ def toggle_like(video_id):
             return jsonify({'success': False, 'error': 'Engagement tracking not available'}), 503
         
         user_id = get_session_id()
+        
+        # Server-side rate limiting: prevent clicks within 2 seconds
+        if not check_rate_limit(user_id, video_id, 'like', min_seconds=2):
+            return jsonify({
+                'success': False, 
+                'error': 'Too many requests. Please wait a moment.'
+            }), 429
+        
         likes, dislikes, action = engagement_tracker.toggle_like(video_id, user_id)
         
         return jsonify({
@@ -869,6 +900,14 @@ def toggle_dislike(video_id):
             return jsonify({'success': False, 'error': 'Engagement tracking not available'}), 503
         
         user_id = get_session_id()
+        
+        # Server-side rate limiting: prevent clicks within 2 seconds
+        if not check_rate_limit(user_id, video_id, 'dislike', min_seconds=2):
+            return jsonify({
+                'success': False,
+                'error': 'Too many requests. Please wait a moment.'
+            }), 429
+        
         likes, dislikes, action = engagement_tracker.toggle_dislike(video_id, user_id)
         
         return jsonify({

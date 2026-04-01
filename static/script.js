@@ -1175,6 +1175,12 @@ async function handleLike() {
             method: 'POST'
         });
         
+        // Handle rate limiting (429) silently
+        if (response.status === 429) {
+            console.log('⏳ Rate limited - click rejected by server');
+            return;
+        }
+        
         if (!response.ok) {
             console.error('Failed to toggle like');
             return;
@@ -1245,6 +1251,12 @@ async function handleDislike() {
         const response = await fetch(`/api/dislike/${encodeURIComponent(window.currentVideoId)}`, {
             method: 'POST'
         });
+        
+        // Handle rate limiting (429) silently
+        if (response.status === 429) {
+            console.log('⏳ Rate limited - click rejected by server');
+            return;
+        }
         
         if (!response.ok) {
             console.error('Failed to toggle dislike');
