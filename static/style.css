@@ -1045,6 +1045,11 @@ body {
     word-wrap: break-word;
 }
 
+/* Hide dislike count (like YouTube) */
+#dislikeCount {
+    display: none !important;
+}
+
 .comments-empty {
     text-align: center;
     padding: 40px 20px;

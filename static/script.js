@@ -1142,16 +1142,27 @@ async function loadComments(videoId) {
 
 // Handle like button click
 let isLikeProcessing = false;
+let lastLikeClickTime = 0;
 async function handleLike() {
     if (!window.currentVideoId) return;
     
     const likeBtn = document.getElementById('likeBtn');
+    const now = Date.now();
+    
+    // Aggressive debounce: Ignore clicks within 1 second
+    if (now - lastLikeClickTime < 1000) {
+        console.log('⏳ Like clicked too quickly, ignoring');
+        return;
+    }
     
     // Prevent multiple simultaneous requests (fixes race condition)
     if (isLikeProcessing || likeBtn.disabled) {
         console.log('⏳ Like request already in progress, ignoring click');
         return;
     }
+    
+    // Update last click time
+    lastLikeClickTime = now;
     
     // Lock and disable button
     isLikeProcessing = true;
@@ -1202,16 +1213,27 @@ async function handleLike() {
 
 // Handle dislike button click
 let isDislikeProcessing = false;
+let lastDislikeClickTime = 0;
 async function handleDislike() {
     if (!window.currentVideoId) return;
     
     const dislikeBtn = document.getElementById('dislikeBtn');
+    const now = Date.now();
+    
+    // Aggressive debounce: Ignore clicks within 1 second
+    if (now - lastDislikeClickTime < 1000) {
+        console.log('⏳ Dislike clicked too quickly, ignoring');
+        return;
+    }
     
     // Prevent multiple simultaneous requests (fixes race condition)
     if (isDislikeProcessing || dislikeBtn.disabled) {
         console.log('⏳ Dislike request already in progress, ignoring click');
         return;
     }
+    
+    // Update last click time
+    lastDislikeClickTime = now;
     
     // Lock and disable button
     isDislikeProcessing = true;
