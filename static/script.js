@@ -8,8 +8,21 @@ let currentSort = 'relevance';
 let selectedUploaders = new Set();
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
 
+// Persistent user ID (stored in localStorage to work across Azure instances)
+function getUserId() {
+    let userId = localStorage.getItem('pacifictube_user_id');
+    if (!userId) {
+        userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('pacifictube_user_id', userId);
+        console.log('📱 Created new user ID:', userId);
+    }
+    return userId;
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize user ID on page load
+    getUserId();
     loadFolders();
     loadVideos();
     setupSearchListener();
@@ -1172,7 +1185,9 @@ async function handleLike() {
     
     try {
         const response = await fetch(`/api/like/${encodeURIComponent(window.currentVideoId)}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: getUserId() })
         });
         
         // Handle rate limiting (429) silently
@@ -1249,7 +1264,9 @@ async function handleDislike() {
     
     try {
         const response = await fetch(`/api/dislike/${encodeURIComponent(window.currentVideoId)}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: getUserId() })
         });
         
         // Handle rate limiting (429) silently

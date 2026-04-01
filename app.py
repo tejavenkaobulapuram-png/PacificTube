@@ -871,7 +871,10 @@ def toggle_like(video_id):
         if engagement_tracker is None:
             return jsonify({'success': False, 'error': 'Engagement tracking not available'}), 503
         
-        user_id = get_session_id()
+        # Use client-provided user_id (from localStorage) for consistency across Azure instances
+        data = request.get_json() or {}
+        user_id = data.get('user_id') or get_session_id()
+        print(f"🔑 Like request - User ID: {user_id[:20]}...")
         
         # Server-side rate limiting: prevent clicks within 2 seconds
         if not check_rate_limit(user_id, video_id, 'like', min_seconds=2):
@@ -899,7 +902,10 @@ def toggle_dislike(video_id):
         if engagement_tracker is None:
             return jsonify({'success': False, 'error': 'Engagement tracking not available'}), 503
         
-        user_id = get_session_id()
+        # Use client-provided user_id (from localStorage) for consistency across Azure instances
+        data = request.get_json() or {}
+        user_id = data.get('user_id') or get_session_id()
+        print(f"🔑 Dislike request - User ID: {user_id[:20]}...")
         
         # Server-side rate limiting: prevent clicks within 2 seconds
         if not check_rate_limit(user_id, video_id, 'dislike', min_seconds=2):
