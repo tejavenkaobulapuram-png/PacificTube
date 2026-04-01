@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadVideos();
     setupSearchListener();
     setupSearchHistory();
+    checkForSharedVideo();
 });
 
 // Load folder structure from API
@@ -192,6 +193,40 @@ async function loadVideos() {
         error.style.display = 'block';
         document.getElementById('errorText').textContent = `❌ ${err.message}`;
     }
+}
+
+// Check for shared video in URL and auto-open
+function checkForSharedVideo() {
+    // Wait for videos to load first
+    const checkInterval = setInterval(() => {
+        if (allVideos.length > 0) {
+            clearInterval(checkInterval);
+            
+            // Check URL for video parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoId = urlParams.get('video');
+            
+            if (videoId) {
+                // Find the video with matching ID
+                const video = allVideos.find(v => v.id === videoId);
+                
+                if (video) {
+                    console.log('📺 Opening shared video:', videoId);
+                    // Small delay to ensure DOM is ready
+                    setTimeout(() => openModal(video), 100);
+                    
+                    // Clean URL (remove parameter) without page reload
+                    const cleanUrl = window.location.origin + window.location.pathname;
+                    window.history.replaceState({}, document.title, cleanUrl);
+                } else {
+                    console.warn('⚠️ Shared video not found:', videoId);
+                }
+            }
+        }
+    }, 100); // Check every 100ms
+    
+    // Safety timeout - stop checking after 10 seconds
+    setTimeout(() => clearInterval(checkInterval), 10000);
 }
 
 // Display videos in grid
