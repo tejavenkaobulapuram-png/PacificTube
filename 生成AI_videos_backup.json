@@ -1,0 +1,73 @@
+{
+  "backup_date": "2026-04-02",
+  "backup_note": "Backup of 生成AI related videos before deletion. Use this to restore videos later.",
+  "video_metadata": {
+    "03_定例会議/Recordings/生成AI連携会議-20260319_145437-会議の録音.mp4": {
+      "uploader": "澁谷 宏樹",
+      "description": "2026年3月19日の生成AI連携会議の録音。AIツールの活用状況とプロジェクト進捗について議論。"
+    },
+    "03_定例会議/Recordings/生成AI連携会議-20260116_145605-会議の録音.mp4": {
+      "uploader": "澁谷 宏樹",
+      "description": "2026年1月16日の生成AI連携会議。新年度の計画とAI導入の課題について協議。"
+    },
+    "03_定例会議/Recordings/生成AI連携会議-20260220_145636-会議の録音.mp4": {
+      "uploader": "澁谷 宏樹",
+      "description": "2026年2月20日の生成AI連携会議。プロジェクトの中間報告と次のステップについて検討。"
+    },
+    "03_定例会議/Recordings/生成AI関連情報連携会議-20250516_150120-会議の録音.mp4": {
+      "uploader": "ギルバートハリヤント",
+      "description": "2025年5月16日の生成AI関連情報連携会議。最新のAI技術動向と社内展開について情報共有。"
+    },
+    "03_定例会議/Recordings/生成AI連携会議-20251219_144752-会議の録音.mp4": {
+      "uploader": "澁谷 宏樹",
+      "description": "2025年12月19日の生成AI連携会議。年末の総括と来年の活動計画について議論。"
+    },
+    "03_定例会議/Recordings/生成AI連携会議-20251121_145723-会議の録音.mp4": {
+      "uploader": "澁谷 宏樹",
+      "description": "2025年11月21日の生成AI連携会議。プロジェクトの進捗状況と課題について報告と協議。"
+    },
+    "03_定例会議/Recordings/生成AI関連情報連携会議-20250612_105717-会議の録音.mp4": {
+      "uploader": "澁谷 宏樹",
+      "description": "2025年6月12日の生成AI関連情報連携会議。夏季活動計画とAIツールの評価について議論。"
+    },
+    "03_定例会議/Recordings/生成AI関連情報連携会議-20250822_150009-会議の録音.mp4": {
+      "uploader": "澁谷 宏樹",
+      "description": "2025年8月22日の生成AI関連情報連携会議。夏季成果報告とセキュリティ対策について協議。"
+    }
+  },
+  "view_data": {
+    "03_定例会議/Recordings/生成AI連携会議-20260116_145605-会議の録音.mp4": {
+      "count": 3,
+      "name": "03_定例会議/Recordings/生成AI連携会議-20260116_145605-会議の録音.mp4",
+      "first_viewed": "2026-03-19T14:18:52.611849",
+      "last_viewed": "2026-03-19T14:43:14.525795"
+    }
+  },
+  "chapter_files": [
+    "chapters/生成AI連携会議-20251121_145723-会議の録音.chapters.json",
+    "chapters/生成AI連携会議-20251219_144752-会議の録音.chapters.json",
+    "chapters/生成AI連携会議-20260116_145605-会議の録音.chapters.json",
+    "chapters/生成AI連携会議-20260220_145636-会議の録音.chapters.json",
+    "chapters/生成AI連携会議-20260319_145437-会議の録音.chapters.json",
+    "chapters/生成AI関連情報連携会議-20250516_150120-会議の録音.chapters.json",
+    "chapters/生成AI関連情報連携会議-20250612_105717-会議の録音.chapters.json",
+    "chapters/生成AI関連情報連携会議-20250822_150009-会議の録音.chapters.json"
+  ],
+  "azure_blob_paths": [
+    "03_定例会議/Recordings/生成AI連携会議-20260319_145437-会議の録音.mp4",
+    "03_定例会議/Recordings/生成AI連携会議-20260116_145605-会議の録音.mp4",
+    "03_定例会議/Recordings/生成AI連携会議-20260220_145636-会議の録音.mp4",
+    "03_定例会議/Recordings/生成AI関連情報連携会議-20250516_150120-会議の録音.mp4",
+    "03_定例会議/Recordings/生成AI連携会議-20251219_144752-会議の録音.mp4",
+    "03_定例会議/Recordings/生成AI連携会議-20251121_145723-会議の録音.mp4",
+    "03_定例会議/Recordings/生成AI関連情報連携会議-20250612_105717-会議の録音.mp4",
+    "03_定例会議/Recordings/生成AI関連情報連携会議-20250822_150009-会議の録音.mp4"
+  ],
+  "restore_instructions": {
+    "step1": "Upload videos to Azure Blob Storage using: az storage blob upload --account-name pacifictubestorage --container-name videos --file [local_path] --name [blob_path]",
+    "step2": "Copy the 'video_metadata' entries back into video_metadata.json",
+    "step3": "Copy the chapter files from chapters_backup/ folder back to chapters/ folder",
+    "step4": "If needed, regenerate subtitles using: python generate_dual_subtitles.py [video_path] ja en",
+    "step5": "If needed, regenerate thumbnails using: python generate_thumbnails.py"
+  }
+}
