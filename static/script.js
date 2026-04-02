@@ -253,6 +253,9 @@ function displayVideos(videos) {
         
         // Load thumbnail from backend
         loadThumbnail(video.id);
+        
+        // Load watch progress for this video
+        loadWatchProgress(video.id);
     });
 }
 
@@ -290,6 +293,34 @@ function loadThumbnail(videoId) {
     placeholder.appendChild(img);
 }
 
+// Load watch progress for thumbnail (YouTube-style blue bar)
+async function loadWatchProgress(videoId) {
+    try {
+        const userId = getUserId();
+        const response = await fetch(`/api/watchposition/${encodeURIComponent(videoId)}?user_id=${encodeURIComponent(userId)}`);
+        const data = await response.json();
+        
+        if (data.success && data.position && data.position.percentage > 0) {
+            const percentage = data.position.percentage;
+            
+            // Find the progress bar for this video
+            const card = document.querySelector(`[data-video-id="${CSS.escape(videoId)}"]`);
+            if (card) {
+                const progressBar = card.querySelector('.watch-progress-bar');
+                const progressFill = card.querySelector('.watch-progress-fill');
+                
+                if (progressBar && progressFill && percentage < 95) { // Don't show if completed
+                    progressBar.style.display = 'block';
+                    progressFill.style.width = percentage + '%';
+                }
+            }
+        }
+    } catch (error) {
+        // Silently fail - progress bar is optional
+        console.debug('No watch progress for:', videoId);
+    }
+}
+
 // Create video card element
 function createVideoCard(video) {
     const card = document.createElement('div');
@@ -308,6 +339,9 @@ function createVideoCard(video) {
                 <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z" />
                 </svg>
+            </div>
+            <div class="watch-progress-bar" style="display: none;">
+                <div class="watch-progress-fill" style="width: 0%"></div>
             </div>
         </div>
     `;
@@ -507,58 +541,15 @@ async function checkResumePosition(videoId, player) {
             
             // Don't resume if near the end (last 5%)
             if (percentage < 95) {
-                // Wait for video metadata to load
+                // Wait for video metadata to load, then auto-resume
                 player.addEventListener('loadedmetadata', function() {
-                    // Show resume prompt
-                    showResumePrompt(savedPosition, player);
+                    console.log(`📺 Auto-resuming from ${Math.floor(savedPosition)}s (${percentage.toFixed(1)}%)`);
+                    player.currentTime = savedPosition;
                 }, { once: true });
             }
         }
     } catch (error) {
         console.error('Error checking resume position:', error);
-    }
-}
-
-function showResumePrompt(position, player) {
-    const minutes = Math.floor(position / 60);
-    const seconds = Math.floor(position % 60);
-    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    
-    // Create resume prompt overlay
-    const prompt = document.createElement('div');
-    prompt.className = 'resume-prompt';
-    prompt.innerHTML = `
-        <div class="resume-content">
-            <p>前回の続きから再生しますか？</p>
-            <p class="resume-time">${timeString}</p>
-            <div class="resume-buttons">
-                <button class="resume-btn-yes" onclick="resumeVideo(${position})">続きから再生</button>
-                <button class="resume-btn-no" onclick="dismissResumePrompt()">最初から再生</button>
-            </div>
-        </div>
-    `;
-    
-    const playerContainer = document.querySelector('.video-modal-player');
-    playerContainer.appendChild(prompt);
-    
-    // Store prompt reference
-    window.currentResumePrompt = prompt;
-    window.currentResumePlayer = player;
-}
-
-function resumeVideo(position) {
-    const player = window.currentResumePlayer;
-    if (player) {
-        player.currentTime = position;
-        player.play();
-    }
-    dismissResumePrompt();
-}
-
-function dismissResumePrompt() {
-    if (window.currentResumePrompt) {
-        window.currentResumePrompt.remove();
-        window.currentResumePrompt = null;
     }
 }
 
@@ -615,9 +606,6 @@ function closeModal() {
         clearInterval(watchPositionInterval);
         watchPositionInterval = null;
     }
-    
-    // Dismiss any resume prompt
-    dismissResumePrompt();
 
     modal.style.display = 'none';
     player.pause();
