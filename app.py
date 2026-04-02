@@ -970,6 +970,47 @@ def add_comment(video_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/watchposition/<path:video_id>', methods=['GET'])
+def get_watch_position(video_id):
+    """Get user's saved watch position for resume feature"""
+    try:
+        if engagement_tracker is None:
+            return jsonify({'success': False, 'error': 'Engagement tracking not available'}), 503
+        
+        # Use client-provided user_id (from localStorage)
+        user_id = request.args.get('user_id') or get_session_id()
+        
+        position = engagement_tracker.get_watch_position(video_id, user_id)
+        
+        return jsonify({
+            'success': True,
+            'position': position
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/watchposition/<path:video_id>', methods=['POST'])
+def save_watch_position(video_id):
+    """Save user's watch position for resume feature"""
+    try:
+        if engagement_tracker is None:
+            return jsonify({'success': False, 'error': 'Engagement tracking not available'}), 503
+        
+        data = request.get_json() or {}
+        user_id = data.get('user_id') or get_session_id()
+        position = data.get('position', 0)
+        duration = data.get('duration', 0)
+        
+        success = engagement_tracker.save_watch_position(video_id, user_id, position, duration)
+        
+        return jsonify({
+            'success': success
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/download/<path:video_id>')
 def download_video(video_id):
     """Stream video file from blob storage for download (no SAS token exposed)"""

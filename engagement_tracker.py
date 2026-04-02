@@ -29,6 +29,7 @@ class EngagementTracker:
         # Create tables if they don't exist
         self.likes_table = self._get_or_create_table("videolikes")
         self.comments_table = self._get_or_create_table("videocomments")
+        self.watch_positions_table = self._get_or_create_table("watchpositions")
     
     def _get_or_create_table(self, table_name):
         """Get table client, creating table if it doesn't exist"""
@@ -256,3 +257,50 @@ class EngagementTracker:
             'dislikes': dislikes_count,
             'comments': comments_count
         }
+    
+    # ===== WATCH POSITION (Resume Feature) =====
+    
+    def save_watch_position(self, video_id, user_id, position, duration=0):
+        """Save user's watch position for resume feature (like YouTube)"""
+        video_key = self._sanitize_key(video_id)
+        user_key = self._sanitize_key(user_id)
+        row_key = f"{video_key}_{user_key}"
+        
+        try:
+            entity = {
+                'PartitionKey': 'watchpositions',
+                'RowKey': row_key,
+                'video_id': video_id,
+                'user_id': user_id,
+                'position': position,  # Current watch position in seconds
+                'duration': duration,  # Total video duration
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'percentage': round((position / duration * 100) if duration > 0 else 0, 2)
+            }
+            # Use upsert to create or update
+            self.watch_positions_table.upsert_entity(entity, mode=UpdateMode.REPLACE)
+            return True
+        except Exception as e:
+            print(f"Error saving watch position: {e}")
+            return False
+    
+    def get_watch_position(self, video_id, user_id):
+        """Get user's last watch position for a video"""
+        video_key = self._sanitize_key(video_id)
+        user_key = self._sanitize_key(user_id)
+        row_key = f"{video_key}_{user_key}"
+        
+        try:
+            entity = self.watch_positions_table.get_entity(
+                partition_key='watchpositions',
+                row_key=row_key
+            )
+            return {
+                'position': entity.get('position', 0),
+                'duration': entity.get('duration', 0),
+                'percentage': entity.get('percentage', 0),
+                'timestamp': entity.get('timestamp', '')
+            }
+        except:
+            # No saved position found
+            return None

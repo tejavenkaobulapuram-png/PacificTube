@@ -452,6 +452,12 @@ function openModal(video) {
     
     // Load related videos from same folder
     loadRelatedVideos(video);
+    
+    // Check for saved watch position (resume feature)
+    checkResumePosition(video.id, player);
+    
+    // Start saving watch position periodically
+    startWatchPositionTracking(video.id, player);
 
     // Close on background click
     modal.onclick = (e) => {
@@ -485,10 +491,133 @@ async function incrementViewCount(videoId, videoName) {
     }
 }
 
+// ===== RESUME WATCHING FEATURE =====
+
+let watchPositionInterval = null;
+
+async function checkResumePosition(videoId, player) {
+    try {
+        const userId = getUserId();
+        const response = await fetch(`/api/watchposition/${encodeURIComponent(videoId)}?user_id=${encodeURIComponent(userId)}`);
+        const data = await response.json();
+        
+        if (data.success && data.position && data.position.position > 10) {
+            const savedPosition = data.position.position;
+            const percentage = data.position.percentage;
+            
+            // Don't resume if near the end (last 5%)
+            if (percentage < 95) {
+                // Wait for video metadata to load
+                player.addEventListener('loadedmetadata', function() {
+                    // Show resume prompt
+                    showResumePrompt(savedPosition, player);
+                }, { once: true });
+            }
+        }
+    } catch (error) {
+        console.error('Error checking resume position:', error);
+    }
+}
+
+function showResumePrompt(position, player) {
+    const minutes = Math.floor(position / 60);
+    const seconds = Math.floor(position % 60);
+    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Create resume prompt overlay
+    const prompt = document.createElement('div');
+    prompt.className = 'resume-prompt';
+    prompt.innerHTML = `
+        <div class="resume-content">
+            <p>前回の続きから再生しますか？</p>
+            <p class="resume-time">${timeString}</p>
+            <div class="resume-buttons">
+                <button class="resume-btn-yes" onclick="resumeVideo(${position})">続きから再生</button>
+                <button class="resume-btn-no" onclick="dismissResumePrompt()">最初から再生</button>
+            </div>
+        </div>
+    `;
+    
+    const playerContainer = document.querySelector('.video-modal-player');
+    playerContainer.appendChild(prompt);
+    
+    // Store prompt reference
+    window.currentResumePrompt = prompt;
+    window.currentResumePlayer = player;
+}
+
+function resumeVideo(position) {
+    const player = window.currentResumePlayer;
+    if (player) {
+        player.currentTime = position;
+        player.play();
+    }
+    dismissResumePrompt();
+}
+
+function dismissResumePrompt() {
+    if (window.currentResumePrompt) {
+        window.currentResumePrompt.remove();
+        window.currentResumePrompt = null;
+    }
+}
+
+function startWatchPositionTracking(videoId, player) {
+    // Clear any existing interval
+    if (watchPositionInterval) {
+        clearInterval(watchPositionInterval);
+    }
+    
+    // Save position every 10 seconds
+    watchPositionInterval = setInterval(() => {
+        if (!player.paused && player.currentTime > 0) {
+            const position = player.currentTime;
+            const duration = player.duration;
+            const percentage = (position / duration) * 100;
+            
+            // Don't save if near the beginning (< 5 sec) or near the end (> 95%)
+            if (position > 5 && percentage < 95) {
+                saveWatchPosition(videoId, position, duration);
+            }
+        }
+    }, 10000); // Every 10 seconds
+}
+
+async function saveWatchPosition(videoId, position, duration) {
+    try {
+        const userId = getUserId();
+        await fetch(`/api/watchposition/${encodeURIComponent(videoId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                position: Math.floor(position),
+                duration: Math.floor(duration)
+            })
+        });
+    } catch (error) {
+        console.error('Error saving watch position:', error);
+    }
+}
+
 // Close video player modal
 function closeModal() {
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('videoPlayer');
+    
+    // Save final watch position before closing
+    if (window.currentVideoId && player.currentTime > 5) {
+        saveWatchPosition(window.currentVideoId, player.currentTime, player.duration);
+    }
+    
+    // Clear watch position tracking
+    if (watchPositionInterval) {
+        clearInterval(watchPositionInterval);
+        watchPositionInterval = null;
+    }
+    
+    // Dismiss any resume prompt
+    dismissResumePrompt();
 
     modal.style.display = 'none';
     player.pause();

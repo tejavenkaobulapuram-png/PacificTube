@@ -794,6 +794,73 @@ body {
     left: 60px;
 }
 
+/* Resume Watching Prompt */
+.resume-prompt {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.95);
+    padding: 30px 40px;
+    border-radius: 12px;
+    z-index: 2000;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: fadeInScale 0.3s ease;
+}
+
+.resume-content {
+    text-align: center;
+    color: #ffffff;
+}
+
+.resume-content p {
+    font-size: 18px;
+    margin: 0 0 10px 0;
+}
+
+.resume-time {
+    font-size: 24px !important;
+    font-weight: 700;
+    color: #1E90FF !important;
+    margin: 10px 0 20px 0 !important;
+}
+
+.resume-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.resume-btn-yes,
+.resume-btn-no {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.resume-btn-yes {
+    background: #1E90FF;
+    color: #ffffff;
+}
+
+.resume-btn-yes:hover {
+    background: #0F78E8;
+    transform: translateY(-2px);
+}
+
+.resume-btn-no {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.resume-btn-no:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 /* Subtitle Controls */
 .subtitle-controls {
     position: absolute;
