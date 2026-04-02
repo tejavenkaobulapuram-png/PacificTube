@@ -1011,6 +1011,72 @@ def save_watch_position(video_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# Download feature temporarily disabled (can be restored by uncommenting)
+# @app.route('/api/download/<path:video_id>')
+# def download_video(video_id):
+#     """Stream video file from blob storage for download (no SAS token exposed)"""
+#     try:
+#         # Extract filename from video_id
+#         filename = video_id.split('/')[-1] if '/' in video_id else video_id
+#         
+#         # Get blob client for the video
+#         blob_client = video_service.container_client.get_blob_client(video_id)
+#         
+#         # Get blob properties to check if it exists and get size
+#         try:
+#             blob_props = blob_client.get_blob_properties()
+#             file_size = blob_props.size
+#         except Exception as e:
+#             return jsonify({'success': False, 'error': f'Video not found: {str(e)}'}), 404
+#         
+#         # Stream the blob content
+#         def generate():
+#             """Generator function to stream blob data in chunks"""
+#             try:
+#                 # Download blob in chunks (10 MB at a time)
+#                 chunk_size = 10 * 1024 * 1024  # 10 MB
+#                 stream = blob_client.download_blob()
+#                 
+#                 for chunk in stream.chunks():
+#                     yield chunk
+#                     
+#             except Exception as e:
+#                 print(f"❌ Error streaming blob: {str(e)}")
+#                 raise
+#         
+#         # Encode filename for Content-Disposition header (RFC 5987)
+#         # This handles Japanese characters and other non-ASCII characters
+#         from urllib.parse import quote
+#         
+#         # ASCII fallback filename (for old browsers)
+#         ascii_filename = filename.encode('ascii', 'ignore').decode('ascii') or 'video.mp4'
+#         
+#         # RFC 5987 encoded filename (for modern browsers with UTF-8 support)
+#         encoded_filename = quote(filename)
+#         
+#         # Create Content-Disposition header with both ASCII and UTF-8 versions
+#         content_disposition = f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{encoded_filename}"
+#         
+#         # Create streaming response with proper headers
+#         response = Response(
+#             generate(),
+#             mimetype='video/mp4',
+#             headers={
+#                 'Content-Disposition': content_disposition,
+#                 'Content-Length': str(file_size),
+#                 'Content-Type': 'video/mp4',
+#                 'Cache-Control': 'no-cache',
+#                 'X-Content-Type-Options': 'nosniff'
+#             }
+#         )
+#         
+#         return response
+#         
+#     except Exception as e:
+#         print(f"❌ Download error: {str(e)}")
+#         return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/health')
 def health():
     """Health check endpoint"""

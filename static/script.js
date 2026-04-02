@@ -1550,6 +1550,54 @@ async function handleShare() {
     }
 }
 
+/* Download feature temporarily disabled (can be restored by uncommenting)
+// Handle download button click
+async function handleDownload() {
+    if (!window.currentVideoId) return;
+    
+    const downloadBtn = document.querySelector('.engagement-btn:nth-child(4)');
+    const originalText = downloadBtn ? downloadBtn.innerHTML : '';
+    
+    try {
+        // Show downloading message
+        if (downloadBtn) {
+            downloadBtn.innerHTML = '<span class="btn-icon">⏳</span><span>Downloading...</span>';
+            downloadBtn.style.background = '#065fd4';
+        }
+        
+        // Create download URL (Flask will stream from blob storage)
+        const downloadUrl = `/api/download/${encodeURIComponent(window.currentVideoId)}`;
+        
+        // Create a temporary link element and click it to trigger download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Show success message
+        if (downloadBtn) {
+            downloadBtn.innerHTML = '<span class="btn-icon">✓</span><span>Download started!</span>';
+            
+            setTimeout(() => {
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.style.background = '';
+            }, 2000);
+        }
+    } catch (error) {
+        console.error('Error downloading:', error);
+        alert('Failed to download video. Please try again.');
+        
+        // Restore button
+        if (downloadBtn) {
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.style.background = '';
+        }
+    }
+}
+*/
+
 // Format date for comments
 function formatDate(timestamp) {
     const date = new Date(timestamp);
