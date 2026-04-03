@@ -748,6 +748,11 @@ body {
     display: block;
     position: relative;
     z-index: 1;
+    /* Download protection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 /* Seek Indicator Overlay */

@@ -411,6 +411,26 @@ function openModal(video) {
     window.currentVideoId = video.id;
     window.currentVideo = video;
     
+    // ===== DOWNLOAD PROTECTION =====
+    // Disable right-click context menu on video
+    player.oncontextmenu = function(e) {
+        e.preventDefault();
+        return false;
+    };
+    
+    // Block download keyboard shortcuts (Ctrl+S, Cmd+S)
+    player.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            console.log('🚫 Download shortcut blocked');
+            return false;
+        }
+    });
+    
+    // Add controlsList attribute to remove download button
+    player.setAttribute('controlsList', 'nodownload');
+    // =============================
+    
     // Prevent video from capturing keyboard focus (critical!)
     player.setAttribute('tabindex', '-1');
     
