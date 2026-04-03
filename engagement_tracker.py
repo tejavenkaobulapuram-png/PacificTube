@@ -304,3 +304,37 @@ class EngagementTracker:
         except:
             # No saved position found
             return None
+    
+    # ===== AUDIT LOGGING =====
+    
+    def log_video_access(self, video_id, user_id, ip_address):
+        """Log video access for security audit trail
+        
+        Tracks who accessed which video, when, and from which IP.
+        Used for security monitoring and compliance.
+        """
+        if not hasattr(self, 'access_log_table'):
+            # Create access log table if it doesn't exist
+            self.access_log_table = self._get_or_create_table("videoaccesslog")
+        
+        video_key = self._sanitize_key(video_id)
+        user_key = self._sanitize_key(user_id)
+        timestamp = datetime.now(timezone.utc)
+        row_key = f"{video_key}_{user_key}_{int(timestamp.timestamp() * 1000)}"
+        
+        try:
+            entity = {
+                'PartitionKey': video_key,  # Partition by video for efficient queries
+                'RowKey': row_key,
+                'video_id': video_id,
+                'user_id': user_id,
+                'ip_address': ip_address,
+                'timestamp': timestamp.isoformat(),
+                'action': 'video_url_requested'
+            }
+            self.access_log_table.create_entity(entity)
+            print(f"📊 Audit log: {user_id} accessed {video_id}")
+            return True
+        except Exception as e:
+            print(f"⚠️ Error logging access: {e}")
+            return False

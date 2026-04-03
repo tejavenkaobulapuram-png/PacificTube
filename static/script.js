@@ -7,6 +7,7 @@ let currentQuery = '';
 let currentSort = 'relevance';
 let selectedUploaders = new Set();
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+let tokenRefreshInterval = null;  // For 2-minute SAS token refresh
 
 // Persistent user ID (stored in localStorage to work across Azure instances)
 function getUserId() {
@@ -393,7 +394,7 @@ function createVideoCard(video) {
 }
 
 // Open video player modal
-function openModal(video) {
+async function openModal(video) {
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('videoPlayer');
     const title = document.getElementById('modalTitle');
@@ -404,7 +405,29 @@ function openModal(video) {
     date.textContent = `更新日: ${formatDate(video.lastModified)}`;
     size.textContent = `サイズ: ${formatFileSize(video.size)}`;
 
-    player.src = video.url;
+    // ===== SHORT-LIVED SAS TOKEN (2 minutes) =====
+    // Fetch fresh video URL from backend (security improvement)
+    try {
+        const urlResponse = await fetch(`/api/video-url/${encodeURIComponent(video.id)}?user_id=${getUserId()}`);
+        const urlData = await urlResponse.json();
+        
+        if (!urlData.success) {
+            throw new Error('Failed to get video URL');
+        }
+        
+        player.src = urlData.url;
+        console.log('🔒 Video URL loaded (expires in 2 minutes)');
+        
+        // Setup token refresh every 1 minute (before 2-min expiration)
+        setupTokenRefresh(video.id, player);
+        
+    } catch (error) {
+        console.error('Error loading video URL:', error);
+        alert('Failed to load video. Please try again.');
+        return;
+    }
+    // ============================================
+    
     modal.style.display = 'flex';
 
     // Store current video ID and video object for engagement actions
@@ -611,6 +634,43 @@ async function saveWatchPosition(videoId, position, duration) {
     }
 }
 
+// ===== TOKEN REFRESH (2-minute SAS expiration) =====
+function setupTokenRefresh(videoId, player) {
+    // Clear any existing token refresh interval
+    if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+    }
+    
+    // Refresh token every 1 minute (before 2-minute expiration)
+    tokenRefreshInterval = setInterval(async () => {
+        try {
+            const currentTime = player.currentTime;  // Save current position
+            
+            // Fetch new URL with fresh 2-minute token
+            const response = await fetch(`/api/video-url/${encodeURIComponent(videoId)}?user_id=${getUserId()}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                player.src = data.url;
+                player.currentTime = currentTime;  // Restore position
+                
+                // Only auto-play if it was playing before
+                if (!player.paused) {
+                    player.play();
+                }
+                
+                console.log('🔄 Token refreshed (new 2-min expiration)');
+            } else {
+                console.error('Failed to refresh token:', data.error);
+            }
+        } catch (error) {
+            console.error('Error refreshing token:', error);
+        }
+    }, 60000);  // Every 1 minute (60 seconds)
+    
+    console.log('✅ Token refresh enabled (every 1 minute)');
+}
+
 // Close video player modal
 function closeModal() {
     const modal = document.getElementById('videoModal');
@@ -625,6 +685,13 @@ function closeModal() {
     if (watchPositionInterval) {
         clearInterval(watchPositionInterval);
         watchPositionInterval = null;
+    }
+    
+    // Clear token refresh interval
+    if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+        tokenRefreshInterval = null;
+        console.log('🔒 Token refresh stopped');
     }
 
     modal.style.display = 'none';

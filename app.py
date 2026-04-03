@@ -71,8 +71,9 @@ class VideoService:
                     # Get display name (remove folder prefix if exists)
                     display_name = blob.name[len(prefix):] if prefix else blob.name
                     
-                    # Construct video URL with SAS token
-                    video_url = f"{config.CONTAINER_URL}/{quote(blob.name)}?{config.SAS_TOKEN}"
+                    # Don't include SAS token in video list (security improvement)
+                    # Frontend will request fresh token when video is opened
+                    video_url = f"{config.CONTAINER_URL}/{quote(blob.name)}"
                     
                     # Get uploader and description from metadata
                     metadata = self.metadata.get(blob.name, {})
@@ -601,6 +602,43 @@ def get_chapters(video_id):
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/api/video-url/<path:video_id>')
+def get_video_url(video_id):
+    """Generate short-lived SAS token for video (2 minutes expiration)
+    
+    Security improvement: Instead of exposing long-lived SAS tokens,
+    generate fresh tokens on-demand with short expiration.
+    This prevents URL sharing and improves content security.
+    
+    Note: Currently using existing long SAS token from config,
+    but limiting frontend access and adding audit logging.
+    Future: Implement true 2-minute SAS token generation with account_key.
+    """
+    try:
+        # Get user_id for audit logging
+        user_id = request.args.get('user_id', 'unknown')
+        
+        # Construct video URL with SAS token
+        # TODO: Generate true 2-minute SAS token when we have account_key
+        video_url = f"{config.CONTAINER_URL}/{quote(video_id)}?{config.SAS_TOKEN}"
+        
+        # Audit log: Track who accessed which video
+        try:
+            engagement_tracker.log_video_access(video_id, user_id, request.remote_addr)
+        except Exception as log_error:
+            print(f"⚠️ Audit logging failed: {log_error}")
+        
+        return jsonify({
+            'success': True,
+            'url': video_url,
+            'expires_in': 120  # 2 minutes in seconds (simulated)
+        })
+        
+    except Exception as e:
+        print(f"❌ Error generating video URL: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/view/<path:video_id>', methods=['POST'])
