@@ -7,6 +7,21 @@ YouTube-style video gallery for Azure Blob Storage
 from dotenv import load_dotenv
 load_dotenv()
 
+import logging
+import sys
+
+# Configure logging for Azure Container Apps
+# Logs go to stdout which Azure captures automatically
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger('PacificTube')
+
 from flask import Flask, render_template, jsonify, request, send_file, session, Response
 from azure.storage.blob import BlobServiceClient, ContainerClient
 import config
@@ -494,7 +509,7 @@ class VideoService:
 
 # Initialize services
 if config.USE_CLOUD_STORAGE:
-    print("🌐 Using Cloud Storage (Azure Table Storage + Blob)")
+    logger.info("STARTUP | mode=cloud | storage=Azure Table Storage + Blob")
     # Use cloud-based trackers
     if config.TABLE_CONNECTION_STRING:
         view_tracker = CloudViewTracker(connection_string=config.TABLE_CONNECTION_STRING)
@@ -509,7 +524,7 @@ if config.USE_CLOUD_STORAGE:
             sas_token=config.TABLE_SAS_TOKEN
         )
 else:
-    print("💾 Using Local Storage (JSON file + local thumbnails)")
+    logger.info("STARTUP | mode=local | storage=JSON file + local thumbnails")
     # Use local file-based trackers
     view_tracker = ViewTracker()
     # For local development, still use cloud engagement tracker if available
@@ -522,7 +537,7 @@ else:
                 sas_token=config.TABLE_SAS_TOKEN
             )
     except:
-        print("⚠️  Engagement tracker not available in local mode")
+        logger.warning("STARTUP | engagement_tracker=unavailable | mode=local")
         engagement_tracker = None
 
 video_service = VideoService(view_tracker)
@@ -618,6 +633,7 @@ def get_video_url(video_id):
         
         # Get user_id for audit logging
         user_id = request.args.get('user_id', 'unknown')
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
         
         # Generate TRUE 2-minute SAS token using account key
         sas_token = generate_blob_sas(
@@ -632,13 +648,14 @@ def get_video_url(video_id):
         # Construct video URL with fresh 2-minute SAS token
         video_url = f"{config.CONTAINER_URL}/{quote(video_id)}?{sas_token}"
         
-        print(f"🔒 Generated 2-min SAS token for: {video_id[:50]}...")
+        # Server-side logging (visible in Azure Container App logs)
+        logger.info(f"SAS_TOKEN_GENERATED | user={user_id} | ip={client_ip} | video={video_id[:80]}")
         
         # Audit log: Track who accessed which video
         try:
-            engagement_tracker.log_video_access(video_id, user_id, request.remote_addr)
+            engagement_tracker.log_video_access(video_id, user_id, client_ip)
         except Exception as log_error:
-            print(f"⚠️ Audit logging failed: {log_error}")
+            logger.warning(f"AUDIT_LOG_FAILED | error={log_error}")
         
         return jsonify({
             'success': True,
@@ -647,7 +664,7 @@ def get_video_url(video_id):
         })
         
     except Exception as e:
-        print(f"❌ Error generating video URL: {str(e)}")
+        logger.error(f"SAS_TOKEN_ERROR | video={video_id[:50]} | error={str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -1132,9 +1149,10 @@ def health():
 
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("🎬 Pacific Tube - Starting...")
-    print(f"📦 Storage: {config.STORAGE_ACCOUNT_NAME}/{config.CONTAINER_NAME}")
-    print(f"🌐 Server: http://localhost:{config.PORT}")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("STARTUP | Pacific Tube Starting...")
+    logger.info(f"STARTUP | storage={config.STORAGE_ACCOUNT_NAME}/{config.CONTAINER_NAME}")
+    logger.info(f"STARTUP | server=http://localhost:{config.PORT}")
+    logger.info(f"STARTUP | sas_token_feature=2min_expiry")
+    logger.info("=" * 60)
     app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)
