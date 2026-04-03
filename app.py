@@ -71,9 +71,9 @@ class VideoService:
                     # Get display name (remove folder prefix if exists)
                     display_name = blob.name[len(prefix):] if prefix else blob.name
                     
-                    # Don't include SAS token in video list (security improvement)
-                    # Frontend will request fresh token when video is opened
-                    video_url = f"{config.CONTAINER_URL}/{quote(blob.name)}"
+                    # SECURITY: Do NOT include SAS token in video list
+                    # Frontend must request URL from /api/video-url endpoint
+                    # This prevents URL sharing and enables audit logging
                     
                     # Get uploader and description from metadata
                     metadata = self.metadata.get(blob.name, {})
@@ -83,7 +83,7 @@ class VideoService:
                     video_data = {
                         'id': blob.name,
                         'name': display_name,
-                        'url': video_url,
+                        'url': None,  # URL fetched on-demand from /api/video-url
                         'size': blob.size,
                         'lastModified': blob.last_modified.isoformat() if blob.last_modified else None,
                         'contentType': blob.content_settings.content_type if blob.content_settings else 'video/mp4',
@@ -606,23 +606,33 @@ def get_chapters(video_id):
 
 @app.route('/api/video-url/<path:video_id>')
 def get_video_url(video_id):
-    """Generate short-lived SAS token for video (2 minutes expiration)
+    """Generate TRUE short-lived SAS token for video (2 minutes expiration)
     
     Security improvement: Instead of exposing long-lived SAS tokens,
-    generate fresh tokens on-demand with short expiration.
+    generate fresh tokens on-demand with 2-minute expiration.
     This prevents URL sharing and improves content security.
-    
-    Note: Currently using existing long SAS token from config,
-    but limiting frontend access and adding audit logging.
-    Future: Implement true 2-minute SAS token generation with account_key.
     """
     try:
+        from datetime import datetime, timedelta, timezone
+        from azure.storage.blob import generate_blob_sas, BlobSasPermissions
+        
         # Get user_id for audit logging
         user_id = request.args.get('user_id', 'unknown')
         
-        # Construct video URL with SAS token
-        # TODO: Generate true 2-minute SAS token when we have account_key
-        video_url = f"{config.CONTAINER_URL}/{quote(video_id)}?{config.SAS_TOKEN}"
+        # Generate TRUE 2-minute SAS token using account key
+        sas_token = generate_blob_sas(
+            account_name=config.STORAGE_ACCOUNT_NAME,
+            container_name=config.CONTAINER_NAME,
+            blob_name=video_id,
+            account_key=config.STORAGE_ACCOUNT_KEY,
+            permission=BlobSasPermissions(read=True),
+            expiry=datetime.now(timezone.utc) + timedelta(minutes=2)
+        )
+        
+        # Construct video URL with fresh 2-minute SAS token
+        video_url = f"{config.CONTAINER_URL}/{quote(video_id)}?{sas_token}"
+        
+        print(f"🔒 Generated 2-min SAS token for: {video_id[:50]}...")
         
         # Audit log: Track who accessed which video
         try:
@@ -633,7 +643,7 @@ def get_video_url(video_id):
         return jsonify({
             'success': True,
             'url': video_url,
-            'expires_in': 120  # 2 minutes in seconds (simulated)
+            'expires_in': 120  # 2 minutes in seconds
         })
         
     except Exception as e:
