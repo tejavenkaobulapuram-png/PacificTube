@@ -14,13 +14,18 @@ import sys
 # Logs go to stdout which Azure captures automatically
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
+    format='%(asctime)s [%(levelname)s] [PacificTube] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     handlers=[
         logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger('PacificTube')
+
+# Suppress verbose Azure SDK logging (reduces noise in logs)
+logging.getLogger('azure').setLevel(logging.WARNING)
+logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 from flask import Flask, render_template, jsonify, request, send_file, session, Response
 from azure.storage.blob import BlobServiceClient, ContainerClient
