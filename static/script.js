@@ -20,6 +20,27 @@ function getUserId() {
     return userId;
 }
 
+// Send important logs to server (visible in Azure Container logs via `az containerapp logs show`)
+// This allows monitoring from local PC instead of browser DevTools
+function serverLog(event, message, videoId = '') {
+    const userId = getUserId();
+    
+    // Also log to browser console for debugging
+    console.log(`[${event}] ${message}`);
+    
+    // Send to backend (fire and forget - don't wait for response)
+    fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            event: event,
+            message: message,
+            user_id: userId,
+            video_id: videoId
+        })
+    }).catch(err => console.warn('Server log failed:', err));
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize user ID on page load
@@ -405,6 +426,9 @@ async function openModal(video) {
     date.textContent = `更新日: ${formatDate(video.lastModified)}`;
     size.textContent = `サイズ: ${formatFileSize(video.size)}`;
 
+    // Log video open event to server
+    serverLog('VIDEO_OPENED', `User opened video: ${video.name}`, video.id);
+
     // SECURITY: Fetch video URL with fresh 2-minute SAS token from backend
     // This prevents URL sharing and enables audit logging
     try {
@@ -571,7 +595,7 @@ async function refreshVideoToken(video) {
     // Don't refresh for paused videos - this prevents annoying auto-start behavior
     // (Like YouTube - it doesn't refresh when you pause and go to another tab)
     if (player.paused) {
-        console.log('⏸️ Video paused - skipping token refresh (will refresh on play)');
+        serverLog('TOKEN_REFRESH_SKIPPED', 'Video paused - skipping token refresh', video.id);
         return;
     }
     
@@ -590,11 +614,11 @@ async function refreshVideoToken(video) {
             // Auto-resume playback since we know video was playing
             player.play().catch(e => console.log('Auto-play prevented:', e));
             
-            console.log('🔄 Video token refreshed (expires in 2 min)');
+            serverLog('TOKEN_REFRESHED', 'Token refreshed while playing (expires in 2 min)', video.id);
             window.currentVideoTokenExpires = Date.now() + (urlData.expires_in * 1000);
         }
     } catch (err) {
-        console.error('⚠️ Token refresh failed:', err);
+        serverLog('TOKEN_REFRESH_FAILED', `Error: ${err.message}`, video.id);
         // Don't interrupt playback on refresh failure, token still has ~1 minute
     }
 }
@@ -606,7 +630,7 @@ async function ensureFreshToken(video) {
     
     // If token is about to expire or expired, refresh before playing
     if (window.currentVideoTokenExpires && (window.currentVideoTokenExpires - now) < bufferTime) {
-        console.log('🔑 Token expired/expiring - refreshing before play...');
+        serverLog('TOKEN_EXPIRING', 'Token expired/expiring - refreshing before play', video.id);
         const player = document.getElementById('videoPlayer');
         const currentTime = player.currentTime;
         
@@ -619,10 +643,10 @@ async function ensureFreshToken(video) {
                 player.src = urlData.url;
                 player.currentTime = currentTime;
                 window.currentVideoTokenExpires = Date.now() + (urlData.expires_in * 1000);
-                console.log('✅ Fresh token obtained');
+                serverLog('TOKEN_OBTAINED', 'Fresh token obtained before play', video.id);
             }
         } catch (err) {
-            console.error('❌ Failed to refresh token:', err);
+            serverLog('TOKEN_ERROR', `Failed to refresh: ${err.message}`, video.id);
         }
     }
 }
@@ -642,7 +666,7 @@ async function handlePlayWithTokenCheck(event) {
     if (window.currentVideoTokenExpires && (window.currentVideoTokenExpires - now) < bufferTime) {
         // Token expired or about to expire - pause and refresh first
         player.pause();
-        console.log('⚠️ Token expired - refreshing before play...');
+        serverLog('TOKEN_EXPIRED_ON_PLAY', 'Token expired - refreshing before play', video.id);
         
         try {
             const userId = localStorage.getItem('pt_user_id') || 'anonymous';
@@ -654,11 +678,11 @@ async function handlePlayWithTokenCheck(event) {
                 player.src = urlData.url;
                 player.currentTime = currentTime;
                 window.currentVideoTokenExpires = Date.now() + (urlData.expires_in * 1000);
-                console.log('✅ Token refreshed - resuming playback');
+                serverLog('TOKEN_REFRESHED_RESUME', 'Token refreshed - resuming playback', video.id);
                 player.play().catch(e => console.log('Play failed:', e));
             }
         } catch (err) {
-            console.error('❌ Token refresh failed:', err);
+            serverLog('TOKEN_REFRESH_ERROR', `Error: ${err.message}`, video.id);
             alert('ビデオURLの更新に失敗しました。ページを再読み込みしてください。');
         }
     }
@@ -758,6 +782,12 @@ async function saveWatchPosition(videoId, position, duration) {
 function closeModal() {
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('videoPlayer');
+    
+    // Log video close event
+    if (window.currentVideoId) {
+        const watchTime = player.currentTime ? Math.floor(player.currentTime) : 0;
+        serverLog('VIDEO_CLOSED', `Watch time: ${watchTime}s`, window.currentVideoId);
+    }
     
     // Save final watch position before closing
     if (window.currentVideoId && player.currentTime > 5) {

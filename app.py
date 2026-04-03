@@ -1147,6 +1147,32 @@ def save_watch_position(video_id):
 #         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/log', methods=['POST'])
+def client_log():
+    """API endpoint for frontend to send logs to backend
+    
+    This allows viewing frontend events in Azure Container logs
+    instead of only in browser console.
+    """
+    try:
+        data = request.json or {}
+        event = data.get('event', 'UNKNOWN')
+        message = data.get('message', '')
+        user_id = data.get('user_id', 'anonymous')
+        video_id = data.get('video_id', '')
+        
+        # Get client IP
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        
+        # Log to server (visible in Azure Container logs)
+        logger.info(f"CLIENT_EVENT | event={event} | user={user_id} | ip={client_ip} | video={video_id[:50] if video_id else 'N/A'} | {message}")
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"CLIENT_LOG_ERROR | error={str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/health')
 def health():
     """Health check endpoint"""
