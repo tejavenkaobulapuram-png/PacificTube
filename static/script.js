@@ -15,20 +15,18 @@ function getUserId() {
     if (!userId) {
         userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
         localStorage.setItem('pacifictube_user_id', userId);
-        console.log('📱 Created new user ID:', userId);
+        // User ID logged to server only (not exposed in browser console)
     }
     return userId;
 }
 
-// Send important logs to server (visible in Azure Container logs via `az containerapp logs show`)
-// This allows monitoring from local PC instead of browser DevTools
+// Send important logs to server ONLY (visible in Azure Container logs via `az containerapp logs show`)
+// SECURITY: Do NOT log to browser console - prevents exposure of sensitive info
 function serverLog(event, message, videoId = '') {
     const userId = getUserId();
     
-    // Also log to browser console for debugging
-    console.log(`[${event}] ${message}`);
-    
-    // Send to backend (fire and forget - don't wait for response)
+    // Send to backend only (fire and forget - don't wait for response)
+    // No browser console logging for security
     fetch('/api/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,7 +36,7 @@ function serverLog(event, message, videoId = '') {
             user_id: userId,
             video_id: videoId
         })
-    }).catch(err => console.warn('Server log failed:', err));
+    }).catch(() => {}); // Silent fail - no console output
 }
 
 // Initialize on page load
@@ -246,15 +244,12 @@ function checkForSharedVideo() {
                 const video = allVideos.find(v => v.id === videoId);
                 
                 if (video) {
-                    console.log('📺 Opening shared video:', videoId);
                     // Small delay to ensure DOM is ready
                     setTimeout(() => openModal(video), 100);
                     
                     // Clean URL (remove parameter) without page reload
                     const cleanUrl = window.location.origin + window.location.pathname;
                     window.history.replaceState({}, document.title, cleanUrl);
-                } else {
-                    console.warn('⚠️ Shared video not found:', videoId);
                 }
             }
         }
@@ -480,7 +475,6 @@ async function openModal(video) {
     player.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
-            console.log('🚫 Download shortcut blocked');
             return false;
         }
     });
@@ -509,8 +503,6 @@ async function openModal(video) {
     document.addEventListener('keydown', handleVideoKeyboard, true);
     player.addEventListener('keydown', handleVideoKeyboard, true);
     
-    console.log('✅ Keyboard listeners attached');
-    
     // Reset seek state when video loads
     seekAccumulator = 0;
     seekDirection = null;
@@ -521,11 +513,9 @@ async function openModal(video) {
     player.addEventListener('seeking', function() {
         // Only reset if this is a MANUAL seek (user clicked timeline), not programmatic
         if (isProgrammaticSeek) {
-            console.log('⚙️ Programmatic seek - keeping accumulator');
             return; // Don't reset accumulator for our own seeks
         }
         
-        console.log('📍 Manual seek detected - resetting state');
         seekAccumulator = 0;
         seekDirection = null;
         lastSeekTime = 0; // Reset throttle timer
@@ -612,7 +602,7 @@ async function refreshVideoToken(video) {
             player.currentTime = currentTime;
             
             // Auto-resume playback since we know video was playing
-            player.play().catch(e => console.log('Auto-play prevented:', e));
+            player.play().catch(() => {}); // Silent fail
             
             serverLog('TOKEN_REFRESHED', 'Token refreshed while playing (expires in 2 min)', video.id);
             window.currentVideoTokenExpires = Date.now() + (urlData.expires_in * 1000);
@@ -679,7 +669,7 @@ async function handlePlayWithTokenCheck(event) {
                 player.currentTime = currentTime;
                 window.currentVideoTokenExpires = Date.now() + (urlData.expires_in * 1000);
                 serverLog('TOKEN_REFRESHED_RESUME', 'Token refreshed - resuming playback', video.id);
-                player.play().catch(e => console.log('Play failed:', e));
+                player.play().catch(() => {}); // Silent fail
             }
         } catch (err) {
             serverLog('TOKEN_REFRESH_ERROR', `Error: ${err.message}`, video.id);
@@ -730,13 +720,12 @@ async function checkResumePosition(videoId, player) {
             if (percentage < 95) {
                 // Wait for video metadata to load, then auto-resume
                 player.addEventListener('loadedmetadata', function() {
-                    console.log(`📺 Auto-resuming from ${Math.floor(savedPosition)}s (${percentage.toFixed(1)}%)`);
                     player.currentTime = savedPosition;
                 }, { once: true });
             }
         }
     } catch (error) {
-        console.error('Error checking resume position:', error);
+        // Silent fail - resume feature is optional
     }
 }
 
@@ -818,8 +807,6 @@ function closeModal() {
     window.removeEventListener('keydown', handleVideoKeyboard, true);
     document.removeEventListener('keydown', handleVideoKeyboard, true);
     player.removeEventListener('keydown', handleVideoKeyboard, true);
-    
-    console.log('🔒 Keyboard listeners removed');
 }
 
 // ==========================================
@@ -847,13 +834,10 @@ function handleVideoKeyboard(event) {
         return;
     }
     
-    console.log('🎯 Handling arrow key:', event.key);
-    
     // CRITICAL: Aggressively prevent native video controls
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    console.log('🛑 Blocked native control');
     
     // Arrow Right: Forward 5 seconds
     if (event.key === 'ArrowRight') {
@@ -873,7 +857,6 @@ function seekVideo(seconds) {
     const indicator = document.getElementById('seekIndicator');
     
     if (!player || !indicator) {
-        console.error('Missing elements - player:', !!player, 'indicator:', !!indicator);
         return;
     }
     
@@ -883,7 +866,6 @@ function seekVideo(seconds) {
     
     // Reset accumulator if direction changed
     if (seekDirection !== null && seekDirection !== currentDirection) {
-        console.log('Direction changed, resetting accumulator');
         seekAccumulator = 0;
     }
     
@@ -891,7 +873,6 @@ function seekVideo(seconds) {
     
     // ALWAYS accumulate (NO throttle for accumulation)
     seekAccumulator += Math.abs(seconds);
-    console.log(`Accumulator: ${seekAccumulator} (added ${Math.abs(seconds)})`);
     
     // Set flag BEFORE seeking to indicate this is programmatic
     isProgrammaticSeek = true;
@@ -899,7 +880,6 @@ function seekVideo(seconds) {
     // Seek the video
     const newTime = Math.max(0, Math.min(player.duration, player.currentTime + seconds));
     player.currentTime = newTime;
-    console.log(`✅ Seeking to ${newTime.toFixed(2)}s`);
     
     // Reset flag after a short delay
     setTimeout(() => {
@@ -916,8 +896,6 @@ function seekVideo(seconds) {
     indicator.style.display = 'block';
     indicator.style.opacity = '1';
     
-    console.log(`📺 Display: "${indicator.textContent}"`);
-    
     // Clear existing timeout
     if (seekTimeout) {
         clearTimeout(seekTimeout);
@@ -925,7 +903,6 @@ function seekVideo(seconds) {
     
     // Hide indicator after 1 second of no activity
     seekTimeout = setTimeout(() => {
-        console.log('Timeout: Resetting accumulator');
         indicator.classList.remove('show');
         indicator.style.display = 'none';
         indicator.style.opacity = '0';
@@ -960,17 +937,17 @@ async function loadSubtitles(videoId) {
         // Fetch available subtitles
         const response = await fetch(`/api/subtitles/${encodeURIComponent(videoId)}`);
         if (!response.ok) {
-            console.log('No subtitles available for this video');
+            // No subtitles available
             return;
         }
         
         const data = await response.json();
         if (!data.success || !data.subtitles || data.subtitles.length === 0) {
-            console.log('No subtitles found');
+            // No subtitles found
             return;
         }
         
-        console.log(`📝 Found ${data.subtitles.length} subtitle(s):`, data.subtitles);
+        // SECURITY: Don't log subtitle data (contains SAS token URLs)
         
         // Store available subtitles
         window.availableSubtitles = data.subtitles;
@@ -1042,15 +1019,12 @@ function selectSubtitle(index) {
         // Turn off subtitles
         window.currentSubtitleIndex = -1;
         if (ccButton) ccButton.classList.remove('active');
-        console.log('Subtitles OFF');
     } else {
         // Enable selected track
         if (player.textTracks[index]) {
             player.textTracks[index].mode = 'showing';
             window.currentSubtitleIndex = index;
             if (ccButton) ccButton.classList.add('active');
-            const langName = window.availableSubtitles[index]?.label || 'Subtitles';
-            console.log(`Subtitles ON: ${langName}`);
         }
     }
 }
@@ -1480,13 +1454,11 @@ async function handleLike() {
     
     // Aggressive debounce: Ignore clicks within 1 second
     if (now - lastLikeClickTime < 1000) {
-        console.log('⏳ Like clicked too quickly, ignoring');
         return;
     }
     
     // Prevent multiple simultaneous requests (fixes race condition)
     if (isLikeProcessing || likeBtn.disabled) {
-        console.log('⏳ Like request already in progress, ignoring click');
         return;
     }
     
@@ -1508,17 +1480,14 @@ async function handleLike() {
         
         // Handle rate limiting (429) silently
         if (response.status === 429) {
-            console.log('⏳ Rate limited - click rejected by server');
             return;
         }
         
         if (!response.ok) {
-            console.error('Failed to toggle like');
             return;
         }
         
         const data = await response.json();
-        console.log('Like response:', data); // Debug log
         
         // Update counts
         document.getElementById('likeCount').textContent = data.likes || 0;
@@ -1559,13 +1528,11 @@ async function handleDislike() {
     
     // Aggressive debounce: Ignore clicks within 1 second
     if (now - lastDislikeClickTime < 1000) {
-        console.log('⏳ Dislike clicked too quickly, ignoring');
         return;
     }
     
     // Prevent multiple simultaneous requests (fixes race condition)
     if (isDislikeProcessing || dislikeBtn.disabled) {
-        console.log('⏳ Dislike request already in progress, ignoring click');
         return;
     }
     
@@ -1587,17 +1554,14 @@ async function handleDislike() {
         
         // Handle rate limiting (429) silently
         if (response.status === 429) {
-            console.log('⏳ Rate limited - click rejected by server');
             return;
         }
         
         if (!response.ok) {
-            console.error('Failed to toggle dislike');
             return;
         }
         
         const data = await response.json();
-        console.log('Dislike response:', data); // Debug log
         
         // Update counts
         document.getElementById('likeCount').textContent = data.likes || 0;
@@ -1617,7 +1581,7 @@ async function handleDislike() {
         await new Promise(resolve => setTimeout(resolve, 200));
         
     } catch (error) {
-        console.error('Error toggling dislike:', error);
+        // Silent fail
     } finally {
         // Always re-enable the button
         dislikeBtn.disabled = false;
