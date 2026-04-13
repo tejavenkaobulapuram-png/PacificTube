@@ -445,7 +445,7 @@ async function openModal(video) {
             clearInterval(window.tokenRefreshInterval);
         }
         window.tokenRefreshInterval = setInterval(async () => {
-            if (document.getElementById('videoModal').style.display === 'flex') {
+            if (document.getElementById('videoModal').style.display === 'block') {
                 await refreshVideoToken(video);
             } else {
                 clearInterval(window.tokenRefreshInterval);
@@ -458,7 +458,16 @@ async function openModal(video) {
         return;
     }
     
-    modal.style.display = 'flex';
+    modal.style.display = 'block';
+    
+    // Hide main content area entirely (YouTube-style)
+    const mainLayout = document.querySelector('.main-layout');
+    if (mainLayout) {
+        mainLayout.style.display = 'none';
+    }
+    
+    // Scroll to top to show video immediately
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Store current video ID and video object for engagement actions
     window.currentVideoId = video.id;
@@ -558,6 +567,9 @@ async function openModal(video) {
     
     // Load chapters/timestamps for this video
     loadChapters(video.id);
+    
+    // Load transcript/mojigokoshi (YouTube-style) for this video
+    loadTranscript(video.id, 'ja');  // Default to Japanese
     
     // Load related videos from same folder
     loadRelatedVideos(video);
@@ -768,7 +780,7 @@ async function saveWatchPosition(videoId, position, duration) {
 }
 
 // Close video player modal
-function closeModal() {
+function closeVideoPlayer() {
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('videoPlayer');
     
@@ -796,6 +808,13 @@ function closeModal() {
     }
 
     modal.style.display = 'none';
+    
+    // Show main content area again (YouTube-style)
+    const mainLayout = document.querySelector('.main-layout');
+    if (mainLayout) {
+        mainLayout.style.display = 'flex';
+    }
+    
     player.pause();
     player.src = '';
     
@@ -807,6 +826,11 @@ function closeModal() {
     window.removeEventListener('keydown', handleVideoKeyboard, true);
     document.removeEventListener('keydown', handleVideoKeyboard, true);
     player.removeEventListener('keydown', handleVideoKeyboard, true);
+}
+
+// Alias for backwards compatibility
+function closeModal() {
+    closeVideoPlayer();
 }
 
 // ==========================================
@@ -825,7 +849,7 @@ function handleVideoKeyboard(event) {
     const player = document.getElementById('videoPlayer');
     
     // Only handle if modal is open and not typing in input field
-    if (modal.style.display !== 'flex' || event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+    if (modal.style.display !== 'block' || event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
         return;
     }
     
@@ -1059,6 +1083,12 @@ function setupSearchListener() {
     searchInput.addEventListener('input', async (e) => {
         const query = e.target.value.toLowerCase().trim();
         currentQuery = query;
+
+        // If video modal is open, close it to show search results
+        const videoModal = document.getElementById('videoModal');
+        if (videoModal && videoModal.style.display === 'block') {
+            closeVideoPlayer();
+        }
 
         // Clear previous timeout
         if (searchTimeout) {
@@ -1938,6 +1968,120 @@ function parseTimestamp(timeStr) {
 }
 
 // ==========================================
+// TRANSCRIPT/MOJIGOKOSHI FEATURE (YouTube-style)
+// ==========================================
+
+// Load transcript (文字起こし) from subtitles
+async function loadTranscript(videoId, lang = 'ja') {
+    const transcriptSidebar = document.getElementById('transcriptSidebar');
+    const transcriptList = document.getElementById('transcriptList');
+    
+    if (!transcriptSidebar || !transcriptList) return;
+    
+    // Show loading state
+    transcriptSidebar.style.display = 'block';
+    transcriptList.innerHTML = '<div class="transcript-loading">字幕を読み込んでいます...</div>';
+    
+    try {
+        const response = await fetch(`/api/transcript/${encodeURIComponent(videoId)}?lang=${lang}`);
+        
+        if (!response.ok) {
+            transcriptSection.style.display = 'none';
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success || !data.lines || data.lines.length === 0) {
+            transcriptList.innerHTML = '<div class="transcript-empty">字幕がありません</div>';
+            return;
+        }
+        
+        // Display transcript lines
+        transcriptList.innerHTML = '';
+        
+        data.lines.forEach((line, index) => {
+            const lineItem = document.createElement('div');
+            lineItem.className = 'transcript-line';
+            lineItem.setAttribute('data-start', line.start);
+            lineItem.setAttribute('data-end', line.end);
+            lineItem.onclick = () => seekToTranscript(line.start);
+            
+            lineItem.innerHTML = `
+                <span class="transcript-timestamp">${line.start_display}</span>
+                <span class="transcript-text">${escapeHtml(line.text)}</span>
+            `;
+            
+            transcriptList.appendChild(lineItem);
+        });
+        
+        // Set up tracking of current transcript line based on video time
+        setupTranscriptTracking();
+        
+    } catch (error) {
+        console.error('Error loading transcript:', error);
+        transcriptList.innerHTML = '<div class="transcript-error">字幕の読み込みに失敗しました</div>';
+    }
+}
+
+// Seek video to transcript timestamp
+function seekToTranscript(seconds) {
+    const player = document.getElementById('videoPlayer');
+    if (player) {
+        player.currentTime = seconds;
+        player.play();
+    }
+}
+
+// Track and highlight current transcript line as video plays
+function setupTranscriptTracking() {
+    const player = document.getElementById('videoPlayer');
+    if (!player) return;
+    
+    // Remove existing listener if any
+    player.removeEventListener('timeupdate', updateActiveTranscriptLine);
+    player.addEventListener('timeupdate', updateActiveTranscriptLine);
+}
+
+// Update which transcript line is active based on current time (YouTube-style auto-scroll)
+function updateActiveTranscriptLine() {
+    const player = document.getElementById('videoPlayer');
+    const transcriptLines = document.querySelectorAll('.transcript-line');
+    const transcriptList = document.getElementById('transcriptList');
+    
+    if (!player || transcriptLines.length === 0 || !transcriptList) return;
+    
+    const currentTime = player.currentTime;
+    let activeLineElement = null;
+    
+    transcriptLines.forEach((line) => {
+        const start = parseFloat(line.getAttribute('data-start'));
+        const end = parseFloat(line.getAttribute('data-end'));
+        
+        if (currentTime >= start && currentTime <= end) {
+            line.classList.add('active');
+            activeLineElement = line;
+        } else {
+            line.classList.remove('active');
+        }
+    });
+    
+    // Auto-scroll to active line (YouTube-style)
+    if (activeLineElement) {
+        const lineTop = activeLineElement.offsetTop;
+        const lineHeight = activeLineElement.offsetHeight;
+        const listHeight = transcriptList.offsetHeight;
+        const listScrollTop = transcriptList.scrollTop;
+        
+        // Scroll if active line is not visible
+        if (lineTop < listScrollTop || lineTop + lineHeight > listScrollTop + listHeight) {
+            // Scroll so active line is in middle of view
+            transcriptList.scrollTop = lineTop - (listHeight / 2) + (lineHeight / 2);
+        }
+    }
+}
+
+// ==========================================
 // RELATED VIDEOS SIDEBAR FEATURE
 // ==========================================
 
@@ -2045,7 +2189,7 @@ async function switchToVideo(video) {
         }
         window.currentVideo = video;
         window.tokenRefreshInterval = setInterval(async () => {
-            if (document.getElementById('videoModal').style.display === 'flex') {
+            if (document.getElementById('videoModal').style.display === 'block') {
                 await refreshVideoToken(video);
             } else {
                 clearInterval(window.tokenRefreshInterval);
@@ -2087,3 +2231,5 @@ function updateRelatedVideoActiveState(activeVideoId) {
         card.classList.remove('active');
     });
 }
+
+// Modal search functions removed - using main header search only (YouTube-style)

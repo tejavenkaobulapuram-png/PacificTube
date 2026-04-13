@@ -593,11 +593,7 @@ def get_folders():
 def get_subtitles(video_id):
     """API endpoint to get available subtitles for a video"""
     try:
-        # Use original filename for metadata files even if video is compressed
-        original_video_id = video_id.replace('_compressed.mp4', '.mp4')
-        logger.info(f"SUBTITLES | requested={video_id} | using={original_video_id}")
-        
-        subtitles = video_service.get_subtitles(original_video_id)
+        subtitles = video_service.get_subtitles(video_id)
         return jsonify({
             'success': True,
             'subtitles': subtitles,
@@ -615,16 +611,130 @@ def get_chapters(video_id):
     """API endpoint to get chapters/timestamps for a video.
     Auto-generates chapters from subtitles at regular intervals."""
     try:
-        # Use original filename for metadata files even if video is compressed
-        original_video_id = video_id.replace('_compressed.mp4', '.mp4')
-        logger.info(f"CHAPTERS | requested={video_id} | using={original_video_id}")
-        
-        chapters = video_service.get_chapters(original_video_id)
+        chapters = video_service.get_chapters(video_id)
         return jsonify({
             'success': True,
             'chapters': chapters,
             'count': len(chapters)
         })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/transcript/<path:video_id>')
+def get_transcript(video_id):
+    """API endpoint to get transcript (parsed VTT) for YouTube-style display.
+    Returns all subtitle lines with timestamps for scrolling transcript panel."""
+    try:
+        import re
+        from azure.storage.blob import BlobServiceClient
+        
+        # Get language parameter (default: ja)
+        lang = request.args.get('lang', 'ja')
+        
+        # Get subtitle filename
+        video_base = video_id.rsplit('.', 1)[0] if '.' in video_id else video_id
+        subtitle_blob = f"{video_base}.{lang}.vtt"
+        
+        # Download VTT file from blob storage
+        blob_service_client = BlobServiceClient(
+            account_url=f"https://{config.STORAGE_ACCOUNT_NAME}.blob.core.windows.net",
+            credential=config.STORAGE_ACCOUNT_KEY
+        )
+        blob_client = blob_service_client.get_blob_client(
+            container=config.CONTAINER_NAME,
+            blob=subtitle_blob
+        )
+        
+        vtt_content = blob_client.download_blob().readall().decode('utf-8')
+        
+        # Parse VTT format
+        lines = []
+        current_line = {}
+        
+        for line in vtt_content.split('\n'):
+            line = line.strip()
+            
+            # Skip WEBVTT header
+            if line.startswith('WEBVTT') or line.startswith('NOTE'):
+                continue
+            
+            # Empty line indicates end of current cue
+            if not line:
+                if current_line.get('text'):
+                    # Remove VTT formatting tags
+                    text = re.sub(r'<[^>]+>', '', current_line['text'])
+                    if text.strip():
+                        lines.append({
+                            'start': current_line['start'],
+                            'end': current_line['end'],
+                            'start_display': current_line['start_display'],
+                            'text': text.strip()
+                        })
+                current_line = {}
+                continue
+            
+            # Timestamp line (e.g., "00:00:01.000 --> 00:00:05.000")
+            if '-->' in line:
+                # Save previous cue if exists
+                if current_line.get('text'):
+                    text = re.sub(r'<[^>]+>', '', current_line['text'])
+                    if text.strip():
+                        lines.append({
+                            'start': current_line['start'],
+                            'end': current_line['end'],
+                            'start_display': current_line['start_display'],
+                            'text': text.strip()
+                        })
+                
+                times = line.split('-->') 
+                start_time = times[0].strip()
+                end_time = times[1].strip() if len(times) > 1 else start_time
+                
+                # Convert to seconds for easier seeking
+                def vtt_to_seconds(vtt_time):
+                    parts = vtt_time.replace(',', '.').split(':')
+                    if len(parts) == 3:  # HH:MM:SS.mmm
+                        hours, minutes, seconds = parts
+                        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+                    elif len(parts) == 2:  # MM:SS.mmm
+                        minutes, seconds = parts
+                        return int(minutes) * 60 + float(seconds)
+                    return 0
+                
+                current_line = {
+                    'start': vtt_to_seconds(start_time),
+                    'end': vtt_to_seconds(end_time),
+                    'start_display': start_time.split('.')[0],  # For display (no milliseconds)
+                    'text': ''
+                }
+            # Text line (skip cue numbers which are just digits)
+            elif current_line and not line.isdigit():
+                if current_line.get('text'):
+                    current_line['text'] += ' '  # Add space between multiple text lines
+                current_line['text'] += line
+        
+        # Don't forget last cue if file doesn't end with empty line
+        if current_line.get('text'):
+            text = re.sub(r'<[^>]+>', '', current_line['text'])
+            if text.strip():
+                lines.append({
+                    'start': current_line['start'],
+                    'end': current_line['end'],
+                    'start_display': current_line['start_display'],
+                    'text': text.strip()
+                })
+        
+        return jsonify({
+            'success': True,
+            'language': lang,
+            'lines': lines,
+            'count': len(lines)
+        })
+        
     except Exception as e:
         return jsonify({
             'success': False,
@@ -648,28 +758,21 @@ def get_video_url(video_id):
         user_id = request.args.get('user_id', 'unknown')
         client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
         
-        # USE COMPRESSED VERSION FOR TESTING
-        # Check if compressed version exists, use it instead
-        actual_video_id = video_id
-        if "構造力学（第1回）.mp4" in video_id:
-            actual_video_id = video_id.replace(".mp4", "_compressed.mp4")
-            logger.info(f"USING_COMPRESSED_VERSION | original={video_id} | compressed={actual_video_id}")
-        
         # Generate TRUE 2-minute SAS token using account key
         sas_token = generate_blob_sas(
             account_name=config.STORAGE_ACCOUNT_NAME,
             container_name=config.CONTAINER_NAME,
-            blob_name=actual_video_id,
+            blob_name=video_id,
             account_key=config.STORAGE_ACCOUNT_KEY,
             permission=BlobSasPermissions(read=True),
             expiry=datetime.now(timezone.utc) + timedelta(minutes=2)
         )
         
         # Construct video URL with fresh 2-minute SAS token
-        video_url = f"{config.CONTAINER_URL}/{quote(actual_video_id)}?{sas_token}"
+        video_url = f"{config.CONTAINER_URL}/{quote(video_id)}?{sas_token}"
         
         # Server-side logging (visible in Azure Container App logs)
-        logger.info(f"SAS_TOKEN_GENERATED | user={user_id} | ip={client_ip} | video={actual_video_id[:80]}")
+        logger.info(f"SAS_TOKEN_GENERATED | user={user_id} | ip={client_ip} | video={video_id[:80]}")
         
         # Audit log: Track who accessed which video
         try:
@@ -744,15 +847,11 @@ def get_thumbnail(video_id):
         import os
         import requests
         
-        # Use original filename for thumbnail even if video is compressed
-        original_video_id = video_id.replace('_compressed.mp4', '.mp4')
-        logger.info(f"THUMBNAIL | requested={video_id} | using={original_video_id}")
-        
-        print(f"🎬 Generating thumbnail for: {original_video_id}")
+        print(f"🎬 Generating thumbnail for: {video_id}")
         
         # First, check if pre-generated thumbnail exists in blob storage
         # (for videos with moov atom at end that require full download)
-        thumbnail_blob_name = original_video_id.rsplit('.', 1)[0] + '.thumb.jpg'
+        thumbnail_blob_name = video_id.rsplit('.', 1)[0] + '.thumb.jpg'
         thumbnail_url = f"https://{config.STORAGE_ACCOUNT_NAME}.blob.core.windows.net/{config.CONTAINER_NAME}/{thumbnail_blob_name}?{config.SAS_TOKEN}"
         
         try:
