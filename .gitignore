@@ -39,3 +39,4 @@ Thumbs.db
 
 # Logs
 *.log
+flask_session/
