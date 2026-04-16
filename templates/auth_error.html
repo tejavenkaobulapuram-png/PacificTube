@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>認証エラー - Pacific Tube</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }
+        .error-box {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .error-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+        }
+        .error-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: #E53E3E;
+        }
+        .error-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2D3748;
+            margin-bottom: 16px;
+        }
+        .error-message {
+            font-size: 16px;
+            color: #4A5568;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        .error-description {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+        .error-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .btn-primary {
+            background-color: #1E90FF;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #1873CC;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background-color: #E2E8F0;
+            color: #2D3748;
+        }
+        .btn-secondary:hover {
+            background-color: #CBD5E0;
+        }
+        .help-text {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #E2E8F0;
+            font-size: 13px;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-box">
+            <div class="error-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+            </div>
+            
+            <h1 class="error-title">認証エラー</h1>
+            
+            <p class="error-message">
+                {% if error_type == 'access_denied' %}
+                アクセスが拒否されました
+                {% elif error_type == 'redirect_mismatch' %}
+                リダイレクトURIが一致しません
+                {% elif error_type == 'invalid_credentials' %}
+                認証情報が無効です
+                {% else %}
+                ログインに失敗しました
+                {% endif %}
+            </p>
+            
+            <p class="error-description">
+                {{ error_description }}
+            </p>
+            
+            <div class="error-actions">
+                <a href="/login" class="btn btn-primary">もう一度ログイン</a>
+                <a href="/" class="btn btn-secondary">ホームに戻る</a>
+            </div>
+            
+            <div class="help-text">
+                問題が解決しない場合は、IT部門にお問い合わせください。<br>
+                エラーコード: {{ error_type or 'unknown' }}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

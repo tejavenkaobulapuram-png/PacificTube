@@ -189,9 +189,72 @@ body {
     fill: #999;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
 .header-right .subtitle {
     color: #4A4A4A;
     font-size: 14px;
+}
+
+/* Auth Section */
+.auth-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.auth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.login-btn {
+    background-color: #1E90FF;
+    color: white;
+}
+
+.login-btn:hover {
+    background-color: #1873CC;
+    transform: scale(1.05);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #2C5282;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.logout-btn {
+    background-color: #E53E3E;
+    color: white;
+    padding: 6px 12px;
+}
+
+.logout-btn:hover {
+    background-color: #C53030;
+    transform: scale(1.05);
 }
 
 /* Container */

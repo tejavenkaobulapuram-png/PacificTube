@@ -29,6 +29,7 @@ logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 from flask import Flask, render_template, jsonify, request, send_file, session, Response
 from flask_caching import Cache
+from flask_session import Session
 from azure.storage.blob import BlobServiceClient, ContainerClient
 import config
 from datetime import datetime
@@ -36,6 +37,9 @@ from urllib.parse import quote
 from view_tracker import ViewTracker
 from cloud_view_tracker import CloudViewTracker
 from engagement_tracker import EngagementTracker
+from entra_auth import EntraIDAuth, setup_auth_routes
+from telemetry import TelemetryTracker
+from dashboard import dashboard_bp
 import os
 import io
 import requests
@@ -46,12 +50,28 @@ from collections import defaultdict
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
-# Initialize caching for cost optimization
+# Initialize caching for cost optimization (also used for sessions)
 # Simple memory cache - reduces Azure Blob Storage API calls by 70-80%
 cache = Cache(app, config={
     'CACHE_TYPE': 'SimpleCache',  # In-memory cache
     'CACHE_DEFAULT_TIMEOUT': 86400  # 24 hours default
 })
+
+# Configure session to use in-memory cache (faster & safer than filesystem)
+app.config['SESSION_TYPE'] = 'cachelib'
+app.config['SESSION_CACHELIB'] = cache.cache  # Reuse Flask-Caching instance
+app.config['SESSION_PERMANENT'] = os.getenv('SESSION_PERMANENT', 'False').lower() == 'true'
+app.config['PERMANENT_SESSION_LIFETIME'] = int(os.getenv('PERMANENT_SESSION_LIFETIME', '3600'))
+
+# Initialize Flask-Session for Entra ID authentication
+Session(app)
+
+# Initialize Entra ID authentication
+entra_auth = EntraIDAuth(app)
+setup_auth_routes(app, entra_auth)
+
+# Register dashboard blueprint for analytics
+app.register_blueprint(dashboard_bp)
 
 # Rate limiting for like/dislike to prevent double-clicks
 # Store last request time per user+video+action
@@ -816,6 +836,13 @@ def increment_view(video_id):
     """API endpoint to increment view count"""
     try:
         video_name = request.json.get('name', 'Unknown') if request.json else 'Unknown'
+        duration_watched = request.json.get('duration_watched', 0) if request.json else 0
+        video_duration = request.json.get('video_duration', 0) if request.json else 0
+        
+        # Track to Application Insights + Table Storage
+        TelemetryTracker.track_video_view(video_id, duration_watched, video_duration)
+        
+        # Also track in local view counter
         new_count = view_tracker.increment_view(video_id, video_name)
         return jsonify({
             'success': True,
@@ -842,6 +869,10 @@ def search_subtitles():
             })
         
         results = video_service.search_subtitles(query)
+        
+        # Track search to Application Insights + Table Storage
+        TelemetryTracker.track_search(query, len(results))
+        
         return jsonify({
             'success': True,
             'results': results,

@@ -39,10 +39,48 @@ function serverLog(event, message, videoId = '') {
     }).catch(() => {}); // Silent fail - no console output
 }
 
+// Check authentication status and update UI
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/user');
+        const data = await response.json();
+        
+        const loginBtn = document.getElementById('loginBtn');
+        const userInfo = document.getElementById('userInfo');
+        const userName = document.getElementById('userName');
+        
+        if (data.auth_enabled) {
+            // Authentication is enabled
+            if (data.authenticated && data.user) {
+                // User is logged in
+                loginBtn.style.display = 'none';
+                userInfo.style.display = 'flex';
+                userName.textContent = data.user.name || data.user.email || 'ユーザー';
+            } else {
+                // User is not logged in - show login button
+                loginBtn.style.display = 'inline-flex';
+                userInfo.style.display = 'none';
+            }
+        } else {
+            // Authentication is disabled - hide auth section entirely
+            loginBtn.style.display = 'none';
+            userInfo.style.display = 'none';
+        }
+    } catch (error) {
+        // Error checking auth - silently hide auth UI and continue
+        // App remains functional without authentication
+        const loginBtn = document.getElementById('loginBtn');
+        const userInfo = document.getElementById('userInfo');
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (userInfo) userInfo.style.display = 'none';
+    }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize user ID on page load
     getUserId();
+    checkAuthStatus();  // Check if user is logged in
     loadFolders();
     loadVideos();
     setupSearchListener();
