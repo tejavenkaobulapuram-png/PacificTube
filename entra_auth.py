@@ -126,6 +126,15 @@ class EntraIDAuth:
                 'logged_in_at': datetime.utcnow().isoformat()
             }
             
+            # Track login to Application Insights + Table Storage
+            try:
+                from telemetry import TelemetryTracker
+                user_email = result.get('id_token_claims', {}).get('preferred_username', 'unknown')
+                TelemetryTracker.track_user_login(user_email)
+            except Exception as track_error:
+                # Don't fail login if tracking fails
+                print(f"Login tracking failed: {track_error}")
+            
             # Check group membership if required
             if self.allowed_groups:
                 user_groups = self.get_user_groups(result.get('access_token'))
