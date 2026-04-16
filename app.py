@@ -38,7 +38,7 @@ from view_tracker import ViewTracker
 from cloud_view_tracker import CloudViewTracker
 from engagement_tracker import EngagementTracker
 from entra_auth import EntraIDAuth, setup_auth_routes
-from telemetry import TelemetryTracker
+from telemetry import TelemetryTracker, initialize_tables
 from dashboard import dashboard_bp
 import os
 import io
@@ -72,6 +72,9 @@ setup_auth_routes(app, entra_auth)
 
 # Register dashboard blueprint for analytics
 app.register_blueprint(dashboard_bp)
+
+# Initialize telemetry tables in Table Storage
+initialize_tables()
 
 # Rate limiting for like/dislike to prevent double-clicks
 # Store last request time per user+video+action
