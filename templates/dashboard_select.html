@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PacificTube</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 60px 80px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .period-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .period-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: white;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .period-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .period-card:hover::before {
+            opacity: 1;
+        }
+
+        .period-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .period-card.cyan {
+            background: linear-gradient(135deg, #56ccf2 0%, #2f80ed 100%);
+            box-shadow: 0 10px 30px rgba(86, 204, 242, 0.3);
+        }
+
+        .period-card.cyan:hover {
+            box-shadow: 0 20px 40px rgba(86, 204, 242, 0.4);
+        }
+
+        .period-card.purple {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .period-card.purple:hover {
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .period-card.green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            box-shadow: 0 10px 30px rgba(17, 153, 142, 0.3);
+        }
+
+        .period-card.green:hover {
+            box-shadow: 0 20px 40px rgba(17, 153, 142, 0.4);
+        }
+
+        .period-number {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .period-label {
+            font-size: 1.2rem;
+            font-weight: 500;
+            opacity: 0.95;
+            text-transform: capitalize;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 30px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .period-selector {
+                gap: 20px;
+            }
+
+            .period-card {
+                padding: 40px 20px;
+            }
+
+            .period-number {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>User Activity Dashboard</h1>
+        <p class="subtitle">Select a time period:</p>
+
+        <div class="period-selector">
+            <a href="/dashboard/7d" class="period-card cyan">
+                <div class="period-number">7</div>
+                <div class="period-label">Days</div>
+            </a>
+
+            <a href="/dashboard/30d" class="period-card purple">
+                <div class="period-number">30</div>
+                <div class="period-label">Days</div>
+            </a>
+
+            <a href="/dashboard/90d" class="period-card green">
+                <div class="period-number">90</div>
+                <div class="period-label">Days</div>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

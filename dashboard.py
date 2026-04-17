@@ -15,8 +15,16 @@ WORKSPACE_ID = 'a0aec3ef-ac1b-4a6a-92ef-9ea18974fd60'  # Log Analytics Workspace
 
 
 @dashboard_bp.route('/dashboard')
+def dashboard_select():
+    """
+    Dashboard landing page - show time period selection
+    User selects 7d, 30d, or 90d
+    """
+    return render_template('dashboard_select.html')
+
+
 @dashboard_bp.route('/dashboard/<period>')
-def dashboard(period='7d'):
+def dashboard(period):
     """
     Main dashboard route - displays analytics for specified time period
     Periods: 7d, 30d, 90d
