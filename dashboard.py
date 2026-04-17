@@ -84,8 +84,17 @@ def get_dashboard_metrics(period):
             'likes': 0,
             'dislikes': 0,
             'uniqueUsers': set(),
-            'uniqueVideos': set()
+            'uniqueVideos': set(),
+            'minDate': None,
+            'maxDate': None
         }
+        
+        # Helper function to track actual date range
+        def update_date_range(timestamp):
+            if metrics['minDate'] is None or timestamp < metrics['minDate']:
+                metrics['minDate'] = timestamp
+            if metrics['maxDate'] is None or timestamp > metrics['maxDate']:
+                metrics['maxDate'] = timestamp
         
         # Count watch history (video views)
         try:
@@ -97,6 +106,7 @@ def get_dashboard_metrics(period):
                 metrics['totalEvents'] += 1
                 metrics['uniqueUsers'].add(entity.get('UserId', 'unknown'))
                 metrics['uniqueVideos'].add(entity.get('VideoPath', 'unknown'))
+                update_date_range(entity.get('Timestamp'))
         except Exception as e:
             print(f"Error querying watch_history: {e}")
         
@@ -109,6 +119,7 @@ def get_dashboard_metrics(period):
                 metrics['userLogins'] += 1
                 metrics['totalEvents'] += 1
                 metrics['uniqueUsers'].add(entity.get('UserId', 'unknown'))
+                update_date_range(entity.get('Timestamp'))
         except Exception as e:
             print(f"Error querying user_sessions: {e}")
         
@@ -121,6 +132,7 @@ def get_dashboard_metrics(period):
                 metrics['searches'] += 1
                 metrics['totalEvents'] += 1
                 metrics['uniqueUsers'].add(entity.get('UserId', 'unknown'))
+                update_date_range(entity.get('Timestamp'))
         except Exception as e:
             print(f"Error querying search_logs: {e}")
         
@@ -133,6 +145,7 @@ def get_dashboard_metrics(period):
                 metrics['comments'] += 1
                 metrics['totalEvents'] += 1
                 metrics['uniqueUsers'].add(entity.get('UserId', 'unknown'))
+                update_date_range(entity.get('Timestamp'))
         except Exception as e:
             print(f"Error querying comments: {e}")
         
@@ -149,8 +162,18 @@ def get_dashboard_metrics(period):
                     metrics['dislikes'] += 1
                 metrics['totalEvents'] += 1
                 metrics['uniqueUsers'].add(entity.get('UserId', 'unknown'))
+                update_date_range(entity.get('Timestamp'))
         except Exception as e:
             print(f"Error querying ratings: {e}")
+        
+        # Format actual date range from data
+        if metrics['minDate'] and metrics['maxDate']:
+            date_range_start = metrics['minDate'].strftime('%Y-%m-%d')
+            date_range_end = metrics['maxDate'].strftime('%Y-%m-%d')
+        else:
+            # Fallback to calculated range if no data
+            date_range_start = start_time.strftime('%Y-%m-%d')
+            date_range_end = end_time.strftime('%Y-%m-%d')
         
         return jsonify({
             'totalEvents': metrics['totalEvents'],
@@ -161,7 +184,9 @@ def get_dashboard_metrics(period):
             'likes': metrics['likes'],
             'dislikes': metrics['dislikes'],
             'uniqueUsers': len(metrics['uniqueUsers']),
-            'uniqueVideos': len(metrics['uniqueVideos'])
+            'uniqueVideos': len(metrics['uniqueVideos']),
+            'dateRangeStart': date_range_start,
+            'dateRangeEnd': date_range_end
         })
         
     except Exception as e:

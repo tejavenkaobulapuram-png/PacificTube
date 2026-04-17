@@ -9,109 +9,105 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Header -->
-        <header class="dashboard-header">
-            <h1>📊 PacificTube アナリティクスダッシュボード</h1>
-            <div class="header-actions">
-                <a href="/dashboard" class="export-btn" style="background: #8b5cf6; text-decoration: none;">⬅️ 期間選択に戻る</a>
-                <button class="export-btn" onclick="exportData()">📥 Excel エクスポート</button>
-                <a href="/" class="home-btn">🏠 ホームに戻る</a>
-            </div>
-        </header>
-
-        <!-- Time Period Selector -->
-        <div class="time-period-selector">
-            <div class="period-card {% if period == '7d' %}active{% endif %}" onclick="changePeriod('7d')">
-                <div class="period-label">過去7日間</div>
-                <div class="period-icon">📅</div>
-            </div>
-            <div class="period-card {% if period == '30d' %}active{% endif %}" onclick="changePeriod('30d')">
-                <div class="period-label">過去30日間</div>
-                <div class="period-icon">📆</div>
-            </div>
-            <div class="period-card {% if period == '90d' %}active{% endif %}" onclick="changePeriod('90d')">
-                <div class="period-label">過去90日間</div>
-                <div class="period-icon">📊</div>
-            </div>
+        <!-- Navigation Buttons -->
+        <div class="navigation-buttons">
+            <a href="/dashboard" class="nav-btn back-btn">⬅️ 期間選択に戻る</a>
+            <a href="/" class="nav-btn home-btn">🏠 ホームに戻る</a>
         </div>
 
-        <!-- Metrics Cards Grid -->
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-icon">📈</div>
-                <div class="metric-content">
-                    <div class="metric-label">合計イベント</div>
-                    <div class="metric-value" id="totalEvents">-</div>
+        <!-- White Content Box (like image) -->
+        <div class="dashboard-content-box">
+            <!-- Header Section -->
+            <div class="dashboard-header-section">
+                <div class="header-title">
+                    <h1>🔍 ユーザーアクティビティダッシュボード</h1>
+                    <div class="header-meta">
+                        <span class="badge application-insights">Application Insights</span>
+                        <span class="badge period-badge">過去{{ period.replace('d', '日間') }}</span>
+                    </div>
                 </div>
+                <button class="excel-export-btn" onclick="exportData()">📥 Excelにエクスポート</button>
             </div>
 
-            <div class="metric-card">
-                <div class="metric-icon">👤</div>
-                <div class="metric-content">
-                    <div class="metric-label">ユーザーログイン</div>
-                    <div class="metric-value" id="userLogins">-</div>
-                </div>
+            <div class="divider"></div>
+
+            <!-- Data Period Row -->
+            <div class="data-period-row">
+                <span class="period-icon">📅</span>
+                <span class="period-text">データ期間: <span id="dateRange">-</span> (<span id="eventCount">-</span> events)</span>
             </div>
 
-            <div class="metric-card">
-                <div class="metric-icon">🎥</div>
-                <div class="metric-content">
-                    <div class="metric-label">動画視聴回数</div>
-                    <div class="metric-value" id="videoViews">-</div>
+            <!-- Metrics Cards Grid with Different Colors -->
+            <div class="metrics-grid">
+                <div class="metric-card green">
+                    <div class="metric-content">
+                        <div class="metric-label">合計イベント</div>
+                        <div class="metric-value" id="totalEvents">-</div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="metric-card">
-                <div class="metric-icon">🔍</div>
-                <div class="metric-content">
-                    <div class="metric-label">検索回数</div>
-                    <div class="metric-value" id="searches">-</div>
+                <div class="metric-card orange">
+                    <div class="metric-content">
+                        <div class="metric-label">ユーザーログイン</div>
+                        <div class="metric-value" id="userLogins">-</div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="metric-card">
-                <div class="metric-icon">💬</div>
-                <div class="metric-content">
-                    <div class="metric-label">コメント数</div>
-                    <div class="metric-value" id="comments">-</div>
+                <div class="metric-card blue-gray">
+                    <div class="metric-content">
+                        <div class="metric-label">動画視聴回数</div>
+                        <div class="metric-value" id="videoViews">-</div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="metric-card">
-                <div class="metric-icon">👍</div>
-                <div class="metric-content">
-                    <div class="metric-label">高評価</div>
-                    <div class="metric-value" id="likes">-</div>
+                <div class="metric-card purple">
+                    <div class="metric-content">
+                        <div class="metric-label">検索回数</div>
+                        <div class="metric-value" id="searches">-</div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="metric-card">
-                <div class="metric-icon">👎</div>
-                <div class="metric-content">
-                    <div class="metric-label">低評価</div>
-                    <div class="metric-value" id="dislikes">-</div>
+                <div class="metric-card teal">
+                    <div class="metric-content">
+                        <div class="metric-label">コメント数</div>
+                        <div class="metric-value" id="comments">-</div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="metric-card">
-                <div class="metric-icon">🎬</div>
-                <div class="metric-content">
-                    <div class="metric-label">ユニーク動画</div>
-                    <div class="metric-value" id="uniqueVideos">-</div>
+                <div class="metric-card amber">
+                    <div class="metric-content">
+                        <div class="metric-label">高評価</div>
+                        <div class="metric-value" id="likes">-</div>
+                    </div>
+                </div>
+
+                <div class="metric-card cyan">
+                    <div class="metric-content">
+                        <div class="metric-label">低評価</div>
+                        <div class="metric-value" id="dislikes">-</div>
+                    </div>
+                </div>
+
+                <div class="metric-card indigo">
+                    <div class="metric-content">
+                        <div class="metric-label">ユニーク動画</div>
+                        <div class="metric-value" id="uniqueVideos">-</div>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- Charts Section (outside white box) -->
         <!-- Line Chart - Daily Activity Trend -->
         <div class="chart-container">
-            <h2>日単位のアクティビティトレンド</h2>
+            <h2>📊 日単位のアクティビティトレンド</h2>
             <canvas id="trendChart"></canvas>
         </div>
 
         <!-- Pie Charts Row -->
         <div class="pie-charts-row">
             <div class="pie-chart-container">
-                <h2>フォルダ別視聴数</h2>
+                <h2>📁 フォルダ別視聴数</h2>
                 <canvas id="folderPieChart"></canvas>
             </div>
 

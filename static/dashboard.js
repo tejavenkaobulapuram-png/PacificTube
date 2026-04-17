@@ -49,6 +49,11 @@ async function loadMetrics(period) {
     document.getElementById('likes').textContent = formatNumber(data.likes);
     document.getElementById('dislikes').textContent = formatNumber(data.dislikes);
     document.getElementById('uniqueVideos').textContent = formatNumber(data.uniqueVideos);
+    
+    // Populate data period row with ACTUAL date range from backend
+    const dateRange = `${data.dateRangeStart} to ${data.dateRangeEnd}`;
+    document.getElementById('dateRange').textContent = dateRange;
+    document.getElementById('eventCount').textContent = formatNumber(data.totalEvents);
 }
 
 // Load trend line chart
