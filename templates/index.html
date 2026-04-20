@@ -283,6 +283,61 @@
         </div>
     </div>
 
+    <!-- Privacy Notice Banner (Fixed Bottom - Collapsible) -->
+    <div class="privacy-notice-banner" id="privacyBanner">
+        <div class="privacy-notice-header" onclick="togglePrivacyNotice()">
+            <div class="privacy-header-left">
+                <svg class="privacy-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+                <span class="privacy-header-text">プライバシーとお問い合わせ</span>
+            </div>
+            <div class="privacy-header-right">
+                <span class="privacy-toggle-hint">クリックして詳細を表示</span>
+                <svg class="privacy-chevron" id="privacyChevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                </svg>
+            </div>
+        </div>
+        <div class="privacy-notice-content" id="privacyContent">
+            <p>
+                本アプリの利用方法や技術的な不具合に関するお問い合わせは、<strong>ナレジア事務局（<a href="mailto:knowledia@tk.pacific.co.jp">knowledia@tk.pacific.co.jp</a>）</strong>までご連絡ください。<br>
+                ※本アプリでは、サービス品質の向上および機能改善を目的として、利用状況等のデータを収集・活用する場合があります。取得したデータは、これらの目的以外には使用いたしません。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Privacy Notice Toggle with localStorage
+        function togglePrivacyNotice() {
+            const content = document.getElementById('privacyContent');
+            const chevron = document.getElementById('privacyChevron');
+            const banner = document.getElementById('privacyBanner');
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                chevron.classList.remove('rotated');
+                banner.classList.remove('expanded');
+                localStorage.setItem('privacyNoticeExpanded', 'false');
+            } else {
+                content.classList.add('expanded');
+                chevron.classList.add('rotated');
+                banner.classList.add('expanded');
+                localStorage.setItem('privacyNoticeExpanded', 'true');
+            }
+        }
+
+        // Restore state on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const isExpanded = localStorage.getItem('privacyNoticeExpanded') === 'true';
+            if (isExpanded) {
+                document.getElementById('privacyContent').classList.add('expanded');
+                document.getElementById('privacyChevron').classList.add('rotated');
+                document.getElementById('privacyBanner').classList.add('expanded');
+            }
+        });
+    </script>
+
     <script src="{{ url_for('static', filename='script.js') }}?v=20260326-1"></script>
 </body>
 </html>
