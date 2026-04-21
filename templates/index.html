@@ -58,6 +58,18 @@
         </div>
     </header>
 
+    <!-- Warning Banner (Below Search Bar) -->
+    <div class="warning-notice-banner" id="warningBanner">
+        <div class="warning-scroll-container">
+            <div class="warning-scroll-text">
+                当社が保有する社内動画資産を有効活用することを目的とした動画資産プラットフォームです。本アプリで提供している動画は社内限定の情報です。社外への転載は禁止されており、無断転載・ダウンロードはできません。
+            </div>
+            <div class="warning-scroll-text" aria-hidden="true">
+                当社が保有する社内動画資産を有効活用することを目的とした動画資産プラットフォームです。本アプリで提供している動画は社内限定の情報です。社外への転載は禁止されており、無断転載・ダウンロードはできません。
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <main class="main-layout">
         <!-- Sidebar Navigation -->
@@ -283,59 +295,38 @@
         </div>
     </div>
 
-    <!-- Privacy Notice Banner (Fixed Bottom - Collapsible) -->
-    <div class="privacy-notice-banner" id="privacyBanner">
-        <div class="privacy-notice-header" onclick="togglePrivacyNotice()">
-            <div class="privacy-header-left">
-                <svg class="privacy-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                </svg>
-                <span class="privacy-header-text">プライバシーとお問い合わせ</span>
+    <!-- Privacy Notice Banner (Fixed Bottom - Scrolling Text) -->
+    <div class="privacy-notice-banner">
+        <div class="privacy-scroll-container">
+            <div class="privacy-scroll-text">
+                本アプリの利用方法や技術的な不具合に関するお問い合わせは、<strong>ナレジア事務局（knowledia@tk.pacific.co.jp）</strong>までご連絡ください。　<span class="privacy-note">※本アプリでは、サービス品質の向上および機能改善を目的として、利用状況等のデータを収集・活用する場合があります。取得したデータは、これらの目的以外には使用いたしません。</span>
             </div>
-            <div class="privacy-header-right">
-                <span class="privacy-toggle-hint">クリックして詳細を表示</span>
-                <svg class="privacy-chevron" id="privacyChevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
-                </svg>
+            <div class="privacy-scroll-text" aria-hidden="true">
+                本アプリの利用方法や技術的な不具合に関するお問い合わせは、<strong>ナレジア事務局（knowledia@tk.pacific.co.jp）</strong>までご連絡ください。　<span class="privacy-note">※本アプリでは、サービス品質の向上および機能改善を目的として、利用状況等のデータを収集・活用する場合があります。取得したデータは、これらの目的以外には使用いたしません。</span>
             </div>
-        </div>
-        <div class="privacy-notice-content" id="privacyContent">
-            <p>
-                本アプリの利用方法や技術的な不具合に関するお問い合わせは、<strong>ナレジア事務局（<a href="mailto:knowledia@tk.pacific.co.jp">knowledia@tk.pacific.co.jp</a>）</strong>までご連絡ください。<br>
-                ※本アプリでは、サービス品質の向上および機能改善を目的として、利用状況等のデータを収集・活用する場合があります。取得したデータは、これらの目的以外には使用いたしません。
-            </p>
         </div>
     </div>
 
     <script>
-        // Privacy Notice Toggle with localStorage
-        function togglePrivacyNotice() {
-            const content = document.getElementById('privacyContent');
-            const chevron = document.getElementById('privacyChevron');
-            const banner = document.getElementById('privacyBanner');
+        // Hide warning banner when video modal is open
+        const videoModal = document.getElementById('videoModal');
+        const warningBanner = document.getElementById('warningBanner');
+        
+        if (videoModal && warningBanner) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === 'style') {
+                        const isModalVisible = window.getComputedStyle(videoModal).display !== 'none';
+                        warningBanner.style.display = isModalVisible ? 'none' : 'block';
+                    }
+                });
+            });
             
-            if (content.classList.contains('expanded')) {
-                content.classList.remove('expanded');
-                chevron.classList.remove('rotated');
-                banner.classList.remove('expanded');
-                localStorage.setItem('privacyNoticeExpanded', 'false');
-            } else {
-                content.classList.add('expanded');
-                chevron.classList.add('rotated');
-                banner.classList.add('expanded');
-                localStorage.setItem('privacyNoticeExpanded', 'true');
-            }
+            observer.observe(videoModal, {
+                attributes: true,
+                attributeFilter: ['style']
+            });
         }
-
-        // Restore state on page load
-        window.addEventListener('DOMContentLoaded', function() {
-            const isExpanded = localStorage.getItem('privacyNoticeExpanded') === 'true';
-            if (isExpanded) {
-                document.getElementById('privacyContent').classList.add('expanded');
-                document.getElementById('privacyChevron').classList.add('rotated');
-                document.getElementById('privacyBanner').classList.add('expanded');
-            }
-        });
     </script>
 
     <script src="{{ url_for('static', filename='script.js') }}?v=20260326-1"></script>
