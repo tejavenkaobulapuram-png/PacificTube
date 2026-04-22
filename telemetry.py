@@ -40,7 +40,8 @@ TABLE_NAMES = {
     'user_sessions': 'UserSessions',
     'search_logs': 'SearchLogs',
     'comments': 'Comments',
-    'ratings': 'Ratings'
+    'ratings': 'Ratings',
+    'user_feedback': 'UserFeedback'
 }
 
 def initialize_tables():

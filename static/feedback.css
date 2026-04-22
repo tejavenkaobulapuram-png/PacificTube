@@ -1,0 +1,947 @@
+/**
+ * Feedback System Styling - Pacific Tube Blue Theme
+ */
+
+/* ==========================================
+   Feedback Button (Bottom Left)
+   ========================================== */
+
+.feedback-btn {
+    position: fixed;
+    bottom: 60px; /* Above privacy banner */
+    left: 20px;
+    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+    transition: all 0.3s ease;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feedback-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(74, 158, 255, 0.5);
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.feedback-btn:active {
+    transform: translateY(0);
+}
+
+/* ==========================================
+   Feedback Management Button (Header)
+   ========================================== */
+
+.feedback-mgmt-btn {
+    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
+    text-decoration: none; /* For link */
+}
+
+.feedback-mgmt-btn:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(74, 158, 255, 0.4);
+    text-decoration: none; /* For link */
+}
+
+.back-home-btn {
+    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
+    text-decoration: none;
+}
+
+.back-home-btn:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(74, 158, 255, 0.4);
+    text-decoration: none;
+}
+
+/* ==========================================
+   Feedback Submission Modal
+   ========================================== */
+
+.feedback-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.feedback-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.feedback-modal-header {
+    padding: 24px;
+    border-bottom: 2px solid #e0f2fe;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+}
+
+.feedback-modal-header h2 {
+    margin: 0;
+    color: #1e40af;
+    font-size: 22px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: #64748b;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #1e40af;
+}
+
+.feedback-modal-body {
+    padding: 24px;
+}
+
+.feedback-description {
+    margin: 0 0 24px 0;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* Form Elements */
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.form-select,
+.form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Star Rating */
+
+.star-rating {
+    display: flex;
+    gap: 8px;
+    font-size: 32px;
+}
+
+.star {
+    cursor: pointer;
+    color: #cbd5e1;
+    transition: color 0.2s;
+    user-select: none;
+}
+
+.star:hover,
+.star.active {
+    color: #fbbf24;
+}
+
+/* Overall Rating */
+
+.overall-rating {
+    display: flex;
+    gap: 16px;
+}
+
+.overall-btn {
+    font-size: 40px;
+    background: none;
+    border: 3px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0.5;
+}
+
+.overall-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+
+.overall-btn.active {
+    opacity: 1;
+    border-color: #4a9eff;
+    background: #eff6ff;
+}
+
+/* Modal Footer */
+
+.feedback-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.btn-cancel,
+.btn-submit {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.btn-cancel:hover {
+    background: #e2e8f0;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.btn-submit:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+/* ==========================================
+   Feedback Management Modal
+   ========================================== */
+
+.feedback-mgmt-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.feedback-mgmt-content {
+    background: white;
+    border-radius: 12px;
+    width: 95%;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+.feedback-mgmt-header {
+    padding: 24px;
+    border-bottom: 2px solid #e0f2fe;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+}
+
+.feedback-mgmt-header h2 {
+    margin: 0;
+    color: #1e40af;
+    font-size: 24px;
+}
+
+.feedback-mgmt-body {
+    padding: 24px;
+}
+
+/* Statistics Section */
+
+.stats-section {
+    margin-bottom: 32px;
+}
+
+.stats-section h3 {
+    margin: 0 0 20px 0;
+    color: #1e293b;
+    font-size: 18px;
+}
+
+.stats-section h4 {
+    margin: 24px 0 12px 0;
+    color: #475569;
+    font-size: 16px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-left: 4px solid #4a9eff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card.positive {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-left-color: #10b981;
+}
+
+.stat-card.negative {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-left-color: #ef4444;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* Category Breakdown */
+
+.category-breakdown {
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.category-bar-container {
+    margin-bottom: 12px;
+}
+
+.category-label {
+    font-size: 13px;
+    color: #475569;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.category-bar {
+    height: 24px;
+    background: linear-gradient(90deg, #4a9eff 0%, #2563eb 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Trend Section */
+
+.trend-section {
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+#trendChart {
+    width: 100%;
+    height: 150px;
+}
+
+/* Feedback List */
+
+.feedback-list-section {
+    margin-top: 24px;
+}
+
+.feedback-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.feedback-list-header h3 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 18px;
+}
+
+.export-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.export-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.feedback-filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.search-box:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.filter-select {
+    padding: 10px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    background: white;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.reset-btn {
+    padding: 10px 20px;
+    background: #fee2e2; /* Lite red background */
+    border: 2px solid #fca5a5;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #991b1b; /* Dark red text */
+}
+
+.reset-btn:hover {
+    background: #fecaca;
+    border-color: #f87171;
+}
+
+/* Feedback Table */
+
+.feedback-table-container {
+    background: white;
+    border-radius: 8px;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.feedback-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.feedback-table thead {
+    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+}
+
+.feedback-table th {
+    padding: 14px 12px;
+    text-align: left;
+    font-weight: 700;
+    color: #1e40af;
+    border-bottom: 2px solid #4a9eff;
+    white-space: nowrap;
+}
+
+.feedback-table tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+    transition: background-color 0.2s;
+}
+
+.feedback-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.feedback-table td {
+    padding: 12px;
+    color: #475569;
+    vertical-align: top;
+}
+
+.feedback-table td.rating-stars {
+    color: #fbbf24 !important; /* Gold color for stars */
+    font-size: 16px;
+}
+
+.feedback-table td .status-badge {
+    /* Ensure status badges maintain their colors in table */
+}
+
+.feedback-table td.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* Table Cell Styling */
+
+.row-number {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.datetime-cell {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.user-cell {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.importance-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.importance-urgent {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.importance-high {
+    background: #fed7aa;
+    color: #9a3412;
+}
+
+.importance-medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.importance-low {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.rating-stars {
+    color: #fbbf24;
+    font-size: 16px;
+}
+
+.overall-rating-icon {
+    font-size: 20px;
+}
+
+.feedback-content {
+    max-width: 250px;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+
+.admin-memo {
+    max-width: 200px;
+}
+
+.admin-memo textarea {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 12px;
+    resize: vertical;
+    min-height: 50px;
+}
+
+.admin-memo-text {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-new,
+.feedback-table .status-new {
+    background: #dbeafe !important;
+    color: #1e40af !important;
+}
+
+.status-reviewed,
+.feedback-table .status-reviewed {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+}
+
+.status-resolved,
+.feedback-table .status-resolved {
+    background: #d1fae5 !important;
+    color: #065f46 !important;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.action-btn {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-edit {
+    background: #eff6ff;
+    color: #1e40af;
+}
+
+.btn-edit:hover {
+    background: #dbeafe;
+}
+
+.btn-resolve {
+    background: #ecfdf5;
+    color: #065f46;
+}
+
+.btn-resolve:hover {
+    background: #d1fae5;
+}
+
+.btn-delete {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.btn-delete:hover {
+    background: #fee2e2;
+}
+
+/* ==========================================
+   Feedback Management Page
+   ========================================== */
+
+.feedback-mgmt-page {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    background: #f8fafc;
+    min-height: calc(100vh - 56px);
+}
+
+/* ==========================================
+   Feedback Detail Modal
+   ========================================== */
+
+.feedback-detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10001;
+}
+
+.feedback-detail-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+.feedback-detail-header {
+    padding: 20px 24px;
+    border-bottom: 2px solid #e0f2fe;
+    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+}
+
+.feedback-detail-header h2 {
+    margin: 0;
+    color: #1e40af;
+    font-size: 20px;
+}
+
+.feedback-detail-body {
+    padding: 24px;
+}
+
+.detail-section {
+    margin-bottom: 20px;
+}
+
+.detail-label {
+    display: block;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.feedback-detail-text {
+    background: #f5f5f5; /* Lite grey background */
+    padding: 16px;
+    border-radius: 8px;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 60px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.detail-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    background: white;
+}
+
+.detail-select:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.detail-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 100px;
+    transition: border-color 0.2s;
+}
+
+.detail-textarea:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.detail-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.btn-close {
+    padding: 10px 24px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+    color: #475569;
+}
+
+.btn-close:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.btn-update {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.btn-update:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Responsive Design */
+
+@media (max-width: 768px) {
+    .feedback-btn {
+        bottom: 70px;
+        left: 10px;
+        padding: 10px 16px;
+        font-size: 12px;
+    }
+    
+    .feedback-mgmt-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+    
+    .feedback-modal-content,
+    .feedback-mgmt-content {
+        width: 95%;
+        max-height: 95vh;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .feedback-filters {
+        flex-direction: column;
+    }
+    
+    .feedback-filters select {
+        width: 100%;
+    }
+}

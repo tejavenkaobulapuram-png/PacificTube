@@ -40,6 +40,7 @@ from engagement_tracker import EngagementTracker
 from entra_auth import EntraIDAuth, setup_auth_routes
 from telemetry import TelemetryTracker, initialize_tables
 from dashboard import dashboard_bp
+from feedback import feedback_bp
 import os
 import io
 import requests
@@ -72,6 +73,9 @@ setup_auth_routes(app, entra_auth)
 
 # Register dashboard blueprint for analytics
 app.register_blueprint(dashboard_bp)
+
+# Register feedback blueprint for user feedback
+app.register_blueprint(feedback_bp)
 
 # Initialize telemetry tables in Table Storage
 initialize_tables()

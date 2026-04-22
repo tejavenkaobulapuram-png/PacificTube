@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pacific Tube - 社内動画ライブラリ</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='feedback.css') }}">
 </head>
 <body>
     <!-- Header -->
@@ -35,6 +36,10 @@
         </div>
         <div class="header-right">
             <span class="subtitle">社内動画ライブラリ</span>
+            <!-- Feedback Management Button -->
+            <a href="/feedback-management" class="feedback-mgmt-btn" title="フィードバック管理">
+                💬 フィードバック管理
+            </a>
             <!-- Auth Section -->
             <div class="auth-section" id="authSection">
                 <!-- Logged out state -->
@@ -307,6 +312,89 @@
         </div>
     </div>
 
+    <!-- Feedback Button (Bottom Left) -->
+    <button class="feedback-btn" id="feedbackBtn" onclick="openFeedbackModal()" title="詳細なフィードバック">
+        📝 詳細なフィードバック
+    </button>
+
+    <!-- Feedback Submission Modal -->
+    <div class="feedback-modal" id="feedbackModal" style="display: none;">
+        <div class="feedback-modal-content">
+            <div class="feedback-modal-header">
+                <h2>詳細なフィードバック</h2>
+                <button class="close-btn" onclick="closeFeedbackModal()">&times;</button>
+            </div>
+            <div class="feedback-modal-body">
+                <p class="feedback-description">この画面に対する詳細なフィードバックをお聞かせください。より良いサービス改善に役立てます。</p>
+                
+                <!-- Star Rating -->
+                <div class="form-group">
+                    <label>評価</label>
+                    <div class="star-rating" id="starRating">
+                        <span class="star" data-rating="1">☆</span>
+                        <span class="star" data-rating="2">☆</span>
+                        <span class="star" data-rating="3">☆</span>
+                        <span class="star" data-rating="4">☆</span>
+                        <span class="star" data-rating="5">☆</span>
+                    </div>
+                    <input type="hidden" id="feedbackRating" value="0">
+                </div>
+
+                <!-- Category Dropdown -->
+                <div class="form-group">
+                    <label for="feedbackCategory">カテゴリー</label>
+                    <select id="feedbackCategory" class="form-select">
+                        <option value="">カテゴリーを選択してください</option>
+                        <option value="動画再生問題">動画再生問題</option>
+                        <option value="検索機能">検索機能</option>
+                        <option value="字幕/音声">字幕/音声</option>
+                        <option value="パフォーマンス/速度">パフォーマンス/速度</option>
+                        <option value="機能追加要望">機能追加要望</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+
+                <!-- Importance Dropdown -->
+                <div class="form-group">
+                    <label for="feedbackImportance">重要度</label>
+                    <select id="feedbackImportance" class="form-select">
+                        <option value="">重要度を選択してください</option>
+                        <option value="低">低</option>
+                        <option value="中" selected>中</option>
+                        <option value="高">高</option>
+                        <option value="緊急">緊急</option>
+                    </select>
+                </div>
+
+                <!-- Detailed Feedback Text -->
+                <div class="form-group">
+                    <label for="feedbackText">詳細なフィードバック</label>
+                    <textarea id="feedbackText" class="form-textarea" rows="5" placeholder="具体的な改善点や不足している機能をお聞かせください..."></textarea>
+                </div>
+
+                <!-- Overall Rating -->
+                <div class="form-group">
+                    <label>総合評価</label>
+                    <div class="overall-rating">
+                        <button type="button" class="overall-btn" data-rating="positive" onclick="setOverallRating('positive')">
+                            👍
+                        </button>
+                        <button type="button" class="overall-btn" data-rating="negative" onclick="setOverallRating('negative')">
+                            👎
+                        </button>
+                    </div>
+                    <input type="hidden" id="overallRating" value="neutral">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="feedback-modal-footer">
+                    <button class="btn-cancel" onclick="closeFeedbackModal()">キャンセル</button>
+                    <button class="btn-submit" onclick="submitFeedback()">送信</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Hide warning banner when video modal is open
         const videoModal = document.getElementById('videoModal');
@@ -330,5 +418,6 @@
     </script>
 
     <script src="{{ url_for('static', filename='script.js') }}?v=20260326-1"></script>
+    <script src="{{ url_for('static', filename='feedback.js') }}"></script>
 </body>
 </html>
