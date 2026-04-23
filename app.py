@@ -27,7 +27,7 @@ logging.getLogger('azure').setLevel(logging.WARNING)
 logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-from flask import Flask, render_template, jsonify, request, send_file, session, Response
+from flask import Flask, render_template, jsonify, request, send_file, session, Response, redirect, url_for
 from flask_caching import Cache
 from azure.storage.blob import BlobServiceClient, ContainerClient
 import config
@@ -72,6 +72,47 @@ cache = Cache(app, config={
 # Initialize Entra ID authentication
 entra_auth = EntraIDAuth(app)
 setup_auth_routes(app, entra_auth)
+
+# =============================================================================
+# AUTHENTICATION REQUIRED FOR ALL PAGES AND APIs
+# Users must login via Microsoft before accessing ANY content
+# APIs return 401 error, pages redirect to login
+# =============================================================================
+@app.before_request
+def require_login():
+    """Require authentication for all routes except login/auth related"""
+    # Skip authentication check for these endpoints
+    allowed_endpoints = ['login', 'auth_callback', 'logout', 'static']
+    
+    # Also allow auth error page
+    if request.endpoint in allowed_endpoints:
+        return None
+    
+    # Allow static files
+    if request.path.startswith('/static/'):
+        return None
+    
+    # Allow auth callback
+    if request.path.startswith('/auth/'):
+        return None
+    
+    # Check if Entra ID is enabled
+    if entra_auth.is_enabled():
+        # Check if user is authenticated
+        if not entra_auth.is_authenticated():
+            # For API requests, return 401 JSON error (not redirect)
+            if request.path.startswith('/api/'):
+                return jsonify({
+                    'error': 'unauthorized',
+                    'message': '認証が必要です。ログインしてください。',
+                    'authenticated': False
+                }), 401
+            
+            # For page requests, redirect to Microsoft login
+            session['next_url'] = request.url
+            return redirect(url_for('login'))
+    
+    return None
 
 # Register dashboard blueprint for analytics
 app.register_blueprint(dashboard_bp)

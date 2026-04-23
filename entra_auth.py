@@ -83,8 +83,8 @@ class EntraIDAuth:
         
         msal_app = self.get_msal_app()
         
-        # Scopes to request
-        scopes = ['User.Read', 'GroupMember.Read.All']
+        # Scopes to request (only use permissions granted by ICT team)
+        scopes = ['User.Read']
         
         # Generate authorization URL
         auth_url = msal_app.get_authorization_request_url(
@@ -107,7 +107,7 @@ class EntraIDAuth:
             # Acquire token from authorization code
             result = msal_app.acquire_token_by_authorization_code(
                 auth_response.get('code'),
-                scopes=['User.Read', 'GroupMember.Read.All'],
+                scopes=['User.Read'],
                 redirect_uri=request.host_url.rstrip('/') + self.redirect_path
             )
             
@@ -256,7 +256,10 @@ def setup_auth_routes(app, auth):
                                  error_description=error_description), 401
         
         # Track successful login to Application Insights + Table Storage
-        TelemetryTracker.track_user_login('EntraID')
+        try:
+            TelemetryTracker.track_user_login('EntraID')
+        except Exception as e:
+            print(f"Login tracking failed (non-critical): {e}")
         
         # Redirect to original URL or home
         next_url = session.pop('next_url', url_for('index'))
@@ -266,7 +269,10 @@ def setup_auth_routes(app, auth):
     def logout():
         """Logout route"""
         # Track logout to Application Insights + Table Storage
-        TelemetryTracker.track_user_logout()
+        try:
+            TelemetryTracker.track_user_logout()
+        except Exception as e:
+            print(f"Logout tracking failed (non-critical): {e}")
         
         logout_url = auth.logout()
         return redirect(logout_url)
