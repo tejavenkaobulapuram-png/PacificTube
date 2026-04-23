@@ -22,7 +22,6 @@
     <div class="feedback-mgmt-page">
         <!-- Statistics Section -->
         <div class="stats-section">
-            <h3>📊 統計情報</h3>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">総フィードバック数</div>
@@ -33,12 +32,28 @@
                     <div class="stat-value" id="averageRating">0.0</div>
                 </div>
                 <div class="stat-card positive">
-                    <div class="stat-label">👍 ポジティブ</div>
+                    <div class="stat-label">👍 高評価</div>
                     <div class="stat-value" id="positiveCount">0</div>
                 </div>
                 <div class="stat-card negative">
-                    <div class="stat-label">👎 ネガティブ</div>
+                    <div class="stat-label">👎 低評価</div>
                     <div class="stat-value" id="negativeCount">0</div>
+                </div>
+                <div class="stat-card status-new">
+                    <div class="stat-label">未対応</div>
+                    <div class="stat-value" id="newStatusCount">0</div>
+                </div>
+                <div class="stat-card status-reviewed">
+                    <div class="stat-label">対応中</div>
+                    <div class="stat-value" id="reviewedStatusCount">0</div>
+                </div>
+                <div class="stat-card status-resolved">
+                    <div class="stat-label">完了</div>
+                    <div class="stat-value" id="resolvedStatusCount">0</div>
+                </div>
+                <div class="stat-card detailed">
+                    <div class="stat-label">詳細</div>
+                    <div class="stat-value" id="detailedCount">0</div>
                 </div>
             </div>
         </div>
@@ -46,7 +61,6 @@
         <!-- Feedback List -->
         <div class="feedback-list-section">
             <div class="feedback-list-header">
-                <h3>📝 フィードバック一覧</h3>
                 <button class="export-btn" onclick="exportFeedbackToExcel()">
                     📥 Excelにエクスポート
                 </button>
@@ -94,13 +108,14 @@
                             <th>評価</th>
                             <th>総合評価</th>
                             <th>フィードバック内容</th>
+                            <th>管理者メモ</th>
                             <th>ステータス</th>
                             <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="feedbackTableBody">
                         <tr>
-                            <td colspan="9" class="no-data">データがありません</td>
+                            <td colspan="10" class="no-data">データがありません</td>
                         </tr>
                     </tbody>
                 </table>

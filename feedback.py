@@ -161,8 +161,10 @@ def get_feedback_stats():
         category_counts = {}
         importance_counts = {}
         overall_rating_counts = {'positive': 0, 'negative': 0, 'neutral': 0}
+        status_counts = {'new': 0, 'reviewed': 0, 'resolved': 0}
         rating_sum = 0
         rating_count = 0
+        detailed_count = 0
         
         # Trend data: count by date
         date_counts = {}
@@ -180,11 +182,21 @@ def get_feedback_stats():
             overall = entity.get('overallRating', 'neutral')
             overall_rating_counts[overall] = overall_rating_counts.get(overall, 0) + 1
             
+            # Status counts
+            status = entity.get('status', 'new')
+            status_counts[status] = status_counts.get(status, 0) + 1
+            
             # Average rating
             rating = entity.get('rating', 0)
             if rating > 0:
                 rating_sum += rating
                 rating_count += 1
+            
+            # Detailed feedback count (feedback with substantial text or admin memo)
+            feedback_text = entity.get('feedbackText', '')
+            admin_memo = entity.get('adminMemo', '')
+            if len(feedback_text) > 50 or admin_memo:
+                detailed_count += 1
             
             # Date counts for trend
             date = entity.get('PartitionKey', '')
@@ -206,6 +218,8 @@ def get_feedback_stats():
                 'categoryBreakdown': category_counts,
                 'importanceBreakdown': importance_counts,
                 'overallRatingBreakdown': overall_rating_counts,
+                'statusBreakdown': status_counts,
+                'detailedCount': detailed_count,
                 'trendData': trend_data
             }
         }), 200
@@ -239,8 +253,9 @@ def update_feedback_status():
         entity['status'] = new_status
         entity['adminMemo'] = admin_memo
         
-        # Update entity
-        table_client.update_entity(entity, mode='REPLACE')
+        # Update entity using UpdateMode.REPLACE
+        from azure.data.tables import UpdateMode
+        table_client.update_entity(entity, mode=UpdateMode.REPLACE)
         
         return jsonify({
             'success': True,

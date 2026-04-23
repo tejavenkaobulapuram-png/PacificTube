@@ -10,7 +10,7 @@
     position: fixed;
     bottom: 60px; /* Above privacy banner */
     left: 20px;
-    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #20B2AA 0%, #00CED1 100%);
     color: white;
     border: none;
     border-radius: 25px;
@@ -18,7 +18,7 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 206, 209, 0.4);
     transition: all 0.3s ease;
     z-index: 9998;
     display: flex;
@@ -28,8 +28,8 @@
 
 .feedback-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(74, 158, 255, 0.5);
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 6px 16px rgba(0, 206, 209, 0.5);
+    background: linear-gradient(135deg, #00CED1 0%, #40E0D0 100%);
 }
 
 .feedback-btn:active {
@@ -41,7 +41,7 @@
    ========================================== */
 
 .feedback-mgmt-btn {
-    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #20B2AA 0%, #00CED1 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -54,19 +54,19 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 206, 209, 0.3);
     text-decoration: none; /* For link */
 }
 
 .feedback-mgmt-btn:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #00CED1 0%, #40E0D0 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(74, 158, 255, 0.4);
+    box-shadow: 0 4px 10px rgba(0, 206, 209, 0.4);
     text-decoration: none; /* For link */
 }
 
 .back-home-btn {
-    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #20B2AA 0%, #00CED1 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -78,14 +78,14 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 206, 209, 0.3);
     text-decoration: none;
 }
 
 .back-home-btn:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #00CED1 0%, #40E0D0 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(74, 158, 255, 0.4);
+    box-shadow: 0 4px 10px rgba(0, 206, 209, 0.4);
     text-decoration: none;
 }
 
@@ -386,6 +386,26 @@
     border-left-color: #ef4444;
 }
 
+.stat-card.status-new {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-left-color: #3b82f6;
+}
+
+.stat-card.status-reviewed {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-left-color: #f59e0b;
+}
+
+.stat-card.status-resolved {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-left-color: #22c55e;
+}
+
+.stat-card.detailed {
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    border-left-color: #a855f7;
+}
+
 .stat-label {
     font-size: 12px;
     color: #64748b;
@@ -398,6 +418,10 @@
     font-size: 28px;
     font-weight: 700;
     color: #1e293b;
+}
+
+.stat-value .star {
+    color: #fbbf24;
 }
 
 /* Category Breakdown */
@@ -615,8 +639,8 @@
     border-radius: 12px;
     font-size: 11px;
     font-weight: 600;
-    background: #e0e7ff;
-    color: #3730a3;
+    background: #f1f5f9;
+    color: #000000;
 }
 
 .importance-badge {
@@ -661,6 +685,15 @@
     white-space: normal;
     word-wrap: break-word;
     line-height: 1.5;
+}
+
+.admin-memo-cell {
+    max-width: 200px;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.5;
+    color: #64748b;
+    font-size: 13px;
 }
 
 .admin-memo {
@@ -728,12 +761,12 @@
 }
 
 .btn-edit {
-    background: #eff6ff;
-    color: #1e40af;
+    background: linear-gradient(135deg, #20B2AA 0%, #00CED1 100%);
+    color: white;
 }
 
 .btn-edit:hover {
-    background: #dbeafe;
+    background: linear-gradient(135deg, #00CED1 0%, #40E0D0 100%);
 }
 
 .btn-resolve {

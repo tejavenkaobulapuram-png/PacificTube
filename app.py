@@ -29,7 +29,6 @@ logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 from flask import Flask, render_template, jsonify, request, send_file, session, Response
 from flask_caching import Cache
-from flask_session import Session
 from azure.storage.blob import BlobServiceClient, ContainerClient
 import config
 from datetime import datetime
@@ -49,23 +48,26 @@ import time
 from collections import defaultdict
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
-# Initialize caching for cost optimization (also used for sessions)
+# Set secret key for Flask sessions (required for Entra ID authentication)
+# Flask's built-in session uses secure cookies (in-memory on client side, encrypted)
+secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+app.secret_key = secret_key
+app.config['SECRET_KEY'] = secret_key
+
+# Session configuration - using Flask's built-in secure cookie sessions
+# Data is stored in encrypted cookies (in-memory on browser, not on disk)
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = int(os.getenv('PERMANENT_SESSION_LIFETIME', '3600'))
+
+# Initialize caching for cost optimization
 # Simple memory cache - reduces Azure Blob Storage API calls by 70-80%
 cache = Cache(app, config={
     'CACHE_TYPE': 'SimpleCache',  # In-memory cache
     'CACHE_DEFAULT_TIMEOUT': 86400  # 24 hours default
 })
-
-# Configure session to use in-memory cache (faster & safer than filesystem)
-app.config['SESSION_TYPE'] = 'cachelib'
-app.config['SESSION_CACHELIB'] = cache.cache  # Reuse Flask-Caching instance
-app.config['SESSION_PERMANENT'] = os.getenv('SESSION_PERMANENT', 'False').lower() == 'true'
-app.config['PERMANENT_SESSION_LIFETIME'] = int(os.getenv('PERMANENT_SESSION_LIFETIME', '3600'))
-
-# Initialize Flask-Session for Entra ID authentication
-Session(app)
 
 # Initialize Entra ID authentication
 entra_auth = EntraIDAuth(app)

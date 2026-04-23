@@ -181,11 +181,19 @@ async function loadFeedbackDataForPage() {
 function displayStatistics(stats) {
     // Total count and average rating
     document.getElementById('totalFeedbackCount').textContent = stats.totalCount;
-    document.getElementById('averageRating').textContent = stats.averageRating.toFixed(1) + ' ★';
+    document.getElementById('averageRating').innerHTML = stats.averageRating.toFixed(1) + ' <span class="star">★</span>';
     
     // Overall rating counts
     document.getElementById('positiveCount').textContent = stats.overallRatingBreakdown.positive || 0;
     document.getElementById('negativeCount').textContent = stats.overallRatingBreakdown.negative || 0;
+    
+    // Status counts
+    document.getElementById('newStatusCount').textContent = stats.statusBreakdown.new || 0;
+    document.getElementById('reviewedStatusCount').textContent = stats.statusBreakdown.reviewed || 0;
+    document.getElementById('resolvedStatusCount').textContent = stats.statusBreakdown.resolved || 0;
+    
+    // Detailed count
+    document.getElementById('detailedCount').textContent = stats.detailedCount || 0;
 }
 
 // Display feedback list in table format
@@ -194,7 +202,7 @@ function displayFeedbackList(feedbackList) {
     tableBody.innerHTML = '';
     
     if (feedbackList.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="9" class="no-data">データがありません</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="10" class="no-data">データがありません</td></tr>';
         return;
     }
     
@@ -233,6 +241,9 @@ function displayFeedbackList(feedbackList) {
             minute: '2-digit'
         });
         
+        const adminMemo = feedback.adminMemo || '';
+        const adminMemoDisplay = adminMemo ? (adminMemo.length > 30 ? adminMemo.substring(0, 30) + '...' : adminMemo) : '-';
+        
         row.innerHTML = `
             <td class="row-number">${index + 1}</td>
             <td class="datetime-cell">${datetime}</td>
@@ -241,6 +252,7 @@ function displayFeedbackList(feedbackList) {
             <td class="rating-stars">${stars}</td>
             <td class="overall-rating-icon">${overallIcon}</td>
             <td class="feedback-content">${escapeHtml(feedback.feedbackText)}</td>
+            <td class="admin-memo-cell">${adminMemo ? escapeHtml(adminMemoDisplay) : '-'}</td>
             <td><span class="status-badge status-${statusClass}">${statusText}</span></td>
             <td class="action-buttons">
                 <button class="action-btn btn-edit" onclick='openDetailModal(${JSON.stringify(feedback).replace(/'/g, "&apos;")})'>詳細</button>
@@ -338,8 +350,8 @@ function exportFeedbackToExcel() {
     const rows = allFeedback.map((feedback, index) => {
         const datetime = new Date(feedback.timestamp).toLocaleString('ja-JP');
         const rating = '★'.repeat(feedback.rating);
-        const overall = feedback.overallRating === 'positive' ? 'ポジティブ' : 
-                       feedback.overallRating === 'negative' ? 'ネガティブ' : '中立';
+        const overall = feedback.overallRating === 'positive' ? '高評価' : 
+                       feedback.overallRating === 'negative' ? '低評価' : '中立';
         const status = {
             'new': '新規',
             'reviewed': '確認済み',
