@@ -7,7 +7,8 @@ Similar to colleague's dashboard design with 7/30/90 day time periods
 import os
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, render_template, jsonify, request, session
-import refrom dashboard_auth import require_dashboard_access
+from dashboard_auth import require_dashboard_access
+
 dashboard_bp = Blueprint('dashboard', __name__)
 
 WORKSPACE_ID = 'a0aec3ef-ac1b-4a6a-92ef-9ea18974fd60'  # Log Analytics Workspace ID
