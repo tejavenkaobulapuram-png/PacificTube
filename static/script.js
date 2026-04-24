@@ -504,6 +504,12 @@ async function openModal(video) {
         mainLayout.style.display = 'none';
     }
     
+    // Hide feedback button and privacy banner when video is playing
+    const feedbackBtn = document.getElementById('feedbackBtn');
+    const privacyBanner = document.querySelector('.privacy-notice-banner');
+    if (feedbackBtn) feedbackBtn.style.display = 'none';
+    if (privacyBanner) privacyBanner.style.display = 'none';
+    
     // Scroll to top to show video immediately
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -866,6 +872,12 @@ function closeVideoPlayer() {
     if (mainLayout) {
         mainLayout.style.display = 'flex';
     }
+    
+    // Show feedback button and privacy banner when returning to home screen
+    const feedbackBtn = document.getElementById('feedbackBtn');
+    const privacyBanner = document.querySelector('.privacy-notice-banner');
+    if (feedbackBtn) feedbackBtn.style.display = 'block';
+    if (privacyBanner) privacyBanner.style.display = 'block';
     
     player.pause();
     player.src = '';
