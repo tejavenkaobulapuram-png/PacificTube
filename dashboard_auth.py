@@ -10,6 +10,7 @@ from flask import session, redirect, url_for, abort, render_template_string
 AUTHORIZED_DASHBOARD_USERS = [
     "hiroki.shibuya@ss.pacific.co.jp",
     "kuruniawanha.girbert@tk.pacific.co.jp",
+    "wintzwe.khaing@tk.pacific.co.jp",
     "kavya.konakati@tk.pacific.co.jp",
     "tejavenka.obulapuram@tk.pacific.co.jp"
 ]
