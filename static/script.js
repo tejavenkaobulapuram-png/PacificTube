@@ -507,8 +507,9 @@ async function openModal(video) {
     // Scroll to top to show video immediately
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Store current video ID and video object for engagement actions
+    // Store current video ID, name, and object for engagement actions
     window.currentVideoId = video.id;
+    window.currentVideoName = video.name;
     window.currentVideo = video;
     
     // ===== DOWNLOAD PROTECTION =====
@@ -594,8 +595,8 @@ async function openModal(video) {
         dislikeBtn.style.opacity = '';
     }
 
-    // Increment view count
-    incrementViewCount(video.id, video.name);
+    // Increment view count (initial tracking)
+    incrementViewCount(video.id, video.name, 0, 0);
 
     // Load engagement data (likes, dislikes, comments)
     loadEngagement(video.id);
@@ -729,14 +730,18 @@ async function handlePlayWithTokenCheck(event) {
 }
 
 // Increment view count when video is played
-async function incrementViewCount(videoId, videoName) {
+async function incrementViewCount(videoId, videoName, durationWatched = 0, videoDuration = 0) {
     try {
         const response = await fetch(`/api/view/${encodeURIComponent(videoId)}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ name: videoName })
+            body: JSON.stringify({ 
+                name: videoName,
+                duration_watched: Math.round(durationWatched),
+                video_duration: Math.round(videoDuration)
+            })
         });
         
         const data = await response.json();
@@ -822,8 +827,17 @@ function closeVideoPlayer() {
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('videoPlayer');
     
-    // Log video close event
-    if (window.currentVideoId) {
+    // Track final watch duration before closing
+    if (window.currentVideoId && player.currentTime > 0 && player.duration > 0) {
+        const durationWatched = player.currentTime;
+        const videoDuration = player.duration;
+        const videoName = window.currentVideoName || 'Unknown';
+        
+        // Send final watch duration to analytics
+        incrementViewCount(window.currentVideoId, videoName, durationWatched, videoDuration);
+        
+        serverLog('VIDEO_CLOSED', `Watch time: ${Math.floor(durationWatched)}s / ${Math.floor(videoDuration)}s`, window.currentVideoId);
+    } else if (window.currentVideoId) {
         const watchTime = player.currentTime ? Math.floor(player.currentTime) : 0;
         serverLog('VIDEO_CLOSED', `Watch time: ${watchTime}s`, window.currentVideoId);
     }
@@ -2240,8 +2254,9 @@ async function switchToVideo(video) {
         return;
     }
     
-    // Update current video ID
+    // Update current video ID and name
     window.currentVideoId = video.id;
+    window.currentVideoName = video.name;
     
     // Reset engagement button states
     const likeBtn = document.getElementById('likeBtn');

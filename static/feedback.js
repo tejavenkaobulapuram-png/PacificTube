@@ -28,6 +28,13 @@ function resetFeedbackForm() {
     document.getElementById('feedbackText').value = '';
     document.getElementById('overallRating').value = 'neutral';
     
+    // Reset submit button
+    const submitBtn = document.getElementById('submitFeedbackBtn');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '送信';
+    }
+    
     // Reset star display
     document.querySelectorAll('.star').forEach(star => {
         star.textContent = '☆';
@@ -106,6 +113,7 @@ async function submitFeedback() {
     const importance = document.getElementById('feedbackImportance').value;
     const feedbackText = document.getElementById('feedbackText').value.trim();
     const overallRating = document.getElementById('overallRating').value;
+    const submitBtn = document.getElementById('submitFeedbackBtn');
     
     // Validation
     if (rating === 0) {
@@ -122,6 +130,10 @@ async function submitFeedback() {
         alert('詳細なフィードバックを入力してください');
         return;
     }
+    
+    // Show submitting state
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送信中...';
     
     try {
         const response = await fetch('/api/feedback/submit', {
@@ -145,10 +157,16 @@ async function submitFeedback() {
             closeFeedbackModal();
         } else {
             alert('エラー: ' + data.message);
+            // Re-enable button on error
+            submitBtn.disabled = false;
+            submitBtn.textContent = '送信';
         }
     } catch (error) {
         console.error('Error submitting feedback:', error);
         alert('フィードバックの送信中にエラーが発生しました');
+        // Re-enable button on error
+        submitBtn.disabled = false;
+        submitBtn.textContent = '送信';
     }
 }
 

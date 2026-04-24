@@ -49,9 +49,19 @@ def submit_feedback():
     """Submit new feedback"""
     try:
         data = request.json
-        user_id = session.get('user_id', 'anonymous')
-        user_name = session.get('user_name', 'Anonymous User')
-        user_email = session.get('user_email', '')
+        
+        # Get user information from session (supports both Entra ID and regular session)
+        user_info = session.get('user', {})
+        if user_info:
+            # Entra ID authenticated user
+            user_id = user_info.get('oid', 'anonymous')
+            user_name = user_info.get('name', 'Anonymous User')
+            user_email = user_info.get('email', '')
+        else:
+            # Fallback to regular session keys
+            user_id = session.get('user_id', 'anonymous')
+            user_name = session.get('user_name', 'Anonymous User')
+            user_email = session.get('user_email', '')
         
         # Generate unique ID
         feedback_id = f"{int(datetime.now(timezone.utc).timestamp() * 1000)}_{uuid.uuid4().hex[:8]}"
