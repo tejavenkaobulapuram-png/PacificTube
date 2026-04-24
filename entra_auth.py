@@ -119,9 +119,9 @@ class EntraIDAuth:
             
             # Store user information in session
             session['user'] = {
-                'name': result.get('id_token_claims', {}).get('name'),
-                'email': result.get('id_token_claims', {}).get('preferred_username'),
-                'oid': result.get('id_token_claims', {}).get('oid'),
+                'name': result.get('id_token_claims', {}).get('name') or 'Unknown User',
+                'email': result.get('id_token_claims', {}).get('preferred_username') or '',
+                'oid': result.get('id_token_claims', {}).get('oid') or '',
                 'token': result.get('access_token'),
                 'logged_in_at': datetime.utcnow().isoformat()
             }
