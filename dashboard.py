@@ -7,14 +7,14 @@ Similar to colleague's dashboard design with 7/30/90 day time periods
 import os
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, render_template, jsonify, request, session
-import re
-
+import refrom dashboard_auth import require_dashboard_access
 dashboard_bp = Blueprint('dashboard', __name__)
 
 WORKSPACE_ID = 'a0aec3ef-ac1b-4a6a-92ef-9ea18974fd60'  # Log Analytics Workspace ID
 
 
 @dashboard_bp.route('/dashboard')
+@require_dashboard_access
 def dashboard_select():
     """
     Dashboard landing page - show time period selection
@@ -24,14 +24,13 @@ def dashboard_select():
 
 
 @dashboard_bp.route('/dashboard/<period>')
+@require_dashboard_access
 def dashboard(period):
     """
     Main dashboard route - displays analytics for specified time period
     Periods: 7d, 30d, 90d
+    Restricted to authorized users only
     """
-    # Check if user has permission (optional - based on Entra ID)
-    # For now, allow all authenticated users
-    
     valid_periods = ['7d', '30d', '90d']
     if period not in valid_periods:
         period = '7d'
@@ -40,10 +39,12 @@ def dashboard(period):
 
 
 @dashboard_bp.route('/api/dashboard/metrics/<period>')
+@require_dashboard_access
 def get_dashboard_metrics(period):
     """
     API endpoint to fetch dashboard metrics
     Returns JSON with all metrics cards data
+    Restricted to authorized users only
     """
     from azure.data.tables import TableServiceClient
     from telemetry import TABLE_NAMES
@@ -195,9 +196,11 @@ def get_dashboard_metrics(period):
 
 
 @dashboard_bp.route('/api/dashboard/trend/<period>')
+@require_dashboard_access
 def get_trend_data(period):
     """
     Get daily activity trend for line chart
+    Restricted to authorized users only
     """
     from azure.data.tables import TableServiceClient
     from telemetry import TABLE_NAMES
@@ -245,9 +248,11 @@ def get_trend_data(period):
 
 
 @dashboard_bp.route('/api/dashboard/folders/<period>')
+@require_dashboard_access
 def get_folder_distribution(period):
     """
     Get video views by folder for pie chart
+    Restricted to authorized users only
     """
     from azure.data.tables import TableServiceClient
     from telemetry import TABLE_NAMES
@@ -289,9 +294,11 @@ def get_folder_distribution(period):
 
 
 @dashboard_bp.route('/api/dashboard/videos/<period>')
+@require_dashboard_access
 def get_top_videos(period):
     """
     Get top 10 videos for pie chart
+    Restricted to authorized users only
     """
     from azure.data.tables import TableServiceClient
     from telemetry import TABLE_NAMES
@@ -333,9 +340,11 @@ def get_top_videos(period):
 
 
 @dashboard_bp.route('/api/dashboard/active-users/<period>')
+@require_dashboard_access
 def get_active_users(period):
     """
     Get list of active users with their activity metrics
+    Restricted to authorized users only
     """
     from azure.data.tables import TableServiceClient
     from telemetry import TABLE_NAMES
@@ -430,9 +439,11 @@ def get_active_users(period):
 
 
 @dashboard_bp.route('/api/dashboard/export/<period>')
+@require_dashboard_access
 def export_dashboard_data(period):
     """
     Export dashboard data to Excel format
+    Restricted to authorized users only
     """
     # TODO: Implement Excel export using openpyxl or pandas
     return jsonify({'message': 'Export feature coming soon'}), 501
