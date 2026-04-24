@@ -94,6 +94,15 @@ class TelemetryTracker:
         folder = parts[0] if len(parts) > 1 else 'Root'
         video_name = parts[-1] if parts else video_path
         
+        # Get user agent and IP from request context
+        try:
+            user_agent = request.headers.get('User-Agent', 'unknown') if request else 'unknown'
+            ip_address = request.remote_addr if request else 'unknown'
+        except RuntimeError:
+            # Outside of request context
+            user_agent = 'unknown'
+            ip_address = 'unknown'
+        
         # Log to Application Insights
         properties = {
             'eventType': 'VideoView',
@@ -105,8 +114,8 @@ class TelemetryTracker:
             'durationWatched': duration_watched,
             'videoDuration': video_duration,
             'completionRate': (duration_watched / video_duration * 100) if video_duration > 0 else 0,
-            'ipAddress': request.remote_addr if request else 'unknown',
-            'userAgent': request.user_agent.string if request else 'unknown'
+            'ipAddress': ip_address,
+            'userAgent': user_agent
         }
         
         if insights_connection:
@@ -128,8 +137,8 @@ class TelemetryTracker:
                     'DurationWatched': duration_watched,
                     'VideoDuration': video_duration,
                     'CompletionRate': (duration_watched / video_duration * 100) if video_duration > 0 else 0,
-                    'IpAddress': request.remote_addr if request else 'unknown',
-                    'UserAgent': request.user_agent.string if request and request.user_agent else 'unknown'
+                    'IpAddress': ip_address,
+                    'UserAgent': user_agent
                 }
                 table_client.create_entity(entity)
             except Exception as e:

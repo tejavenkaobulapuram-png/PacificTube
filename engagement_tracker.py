@@ -48,7 +48,7 @@ class EngagementTracker:
     
     # ===== LIKES/DISLIKES =====
     
-    def toggle_like(self, video_id, user_id):
+    def toggle_like(self, video_id, user_id, user_name='anonymous'):
         """Toggle like for a video. Returns (likes_count, dislikes_count, user_action)"""
         video_key = self._sanitize_key(video_id)
         user_key = self._sanitize_key(user_id)
@@ -77,6 +77,7 @@ class EngagementTracker:
             else:
                 # Change to like
                 entity['like_type'] = 'like'
+                entity['user_name'] = user_name  # Add username for tracking
                 entity['timestamp'] = current_timestamp.isoformat()
                 self.likes_table.upsert_entity(entity, mode=UpdateMode.REPLACE)
                 action = 'liked'
@@ -89,6 +90,7 @@ class EngagementTracker:
                     'RowKey': row_key,
                     'video_id': video_id,
                     'user_id': user_id,
+                    'user_name': user_name,  # Human-readable username from Entra ID
                     'like_type': 'like',
                     'timestamp': current_timestamp.isoformat()
                 }
@@ -101,7 +103,7 @@ class EngagementTracker:
         counts = self.get_engagement(video_id)
         return counts['likes'], counts['dislikes'], action
     
-    def toggle_dislike(self, video_id, user_id):
+    def toggle_dislike(self, video_id, user_id, user_name='anonymous'):
         """Toggle dislike for a video. Returns (likes_count, dislikes_count, user_action)"""
         video_key = self._sanitize_key(video_id)
         user_key = self._sanitize_key(user_id)
@@ -130,6 +132,7 @@ class EngagementTracker:
             else:
                 # Change to dislike
                 entity['like_type'] = 'dislike'
+                entity['user_name'] = user_name  # Add username for tracking
                 entity['timestamp'] = current_timestamp.isoformat()
                 self.likes_table.upsert_entity(entity, mode=UpdateMode.REPLACE)
                 action = 'disliked'
@@ -142,6 +145,7 @@ class EngagementTracker:
                     'RowKey': row_key,
                     'video_id': video_id,
                     'user_id': user_id,
+                    'user_name': user_name,  # Human-readable username from Entra ID
                     'like_type': 'dislike',
                     'timestamp': current_timestamp.isoformat()
                 }
@@ -260,7 +264,7 @@ class EngagementTracker:
     
     # ===== WATCH POSITION (Resume Feature) =====
     
-    def save_watch_position(self, video_id, user_id, position, duration=0):
+    def save_watch_position(self, video_id, user_id, position, duration=0, user_name='anonymous'):
         """Save user's watch position for resume feature (like YouTube)"""
         video_key = self._sanitize_key(video_id)
         user_key = self._sanitize_key(user_id)
@@ -272,6 +276,7 @@ class EngagementTracker:
                 'RowKey': row_key,
                 'video_id': video_id,
                 'user_id': user_id,
+                'user_name': user_name,  # Human-readable username from Entra ID
                 'position': position,  # Current watch position in seconds
                 'duration': duration,  # Total video duration
                 'timestamp': datetime.now(timezone.utc).isoformat(),
@@ -307,7 +312,7 @@ class EngagementTracker:
     
     # ===== AUDIT LOGGING =====
     
-    def log_video_access(self, video_id, user_id, ip_address):
+    def log_video_access(self, video_id, user_id, ip_address, user_name='anonymous'):
         """Log video access for security audit trail
         
         Tracks who accessed which video, when, and from which IP.
@@ -328,12 +333,13 @@ class EngagementTracker:
                 'RowKey': row_key,
                 'video_id': video_id,
                 'user_id': user_id,
+                'user_name': user_name,  # Human-readable username from Entra ID
                 'ip_address': ip_address,
                 'timestamp': timestamp.isoformat(),
                 'action': 'video_url_requested'
             }
             self.access_log_table.create_entity(entity)
-            print(f"📊 Audit log: {user_id} accessed {video_id}")
+            print(f"📊 Audit log: {user_name} ({user_id}) accessed {video_id}")
             return True
         except Exception as e:
             print(f"⚠️ Error logging access: {e}")

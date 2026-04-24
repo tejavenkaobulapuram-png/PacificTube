@@ -844,8 +844,10 @@ def get_video_url(video_id):
         from datetime import datetime, timedelta, timezone
         from azure.storage.blob import generate_blob_sas, BlobSasPermissions
         
-        # Get user_id for audit logging
-        user_id = request.args.get('user_id', 'unknown')
+        # Get user info from Entra ID session for audit logging
+        user_info = session.get('user', {})
+        user_id = user_info.get('oid', 'anonymous')
+        user_name = user_info.get('name', 'anonymous')
         client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
         
         # Generate TRUE 2-minute SAS token using account key
@@ -866,7 +868,7 @@ def get_video_url(video_id):
         
         # Audit log: Track who accessed which video
         try:
-            engagement_tracker.log_video_access(video_id, user_id, client_ip)
+            engagement_tracker.log_video_access(video_id, user_id, client_ip, user_name)
         except Exception as log_error:
             logger.warning(f"AUDIT_LOG_FAILED | error={log_error}")
         
@@ -1169,6 +1171,10 @@ def toggle_like(video_id):
         user_id = data.get('user_id') or get_session_id()
         print(f"🔑 Like request - User ID: {user_id[:20]}...")
         
+        # Get user name from Entra ID session
+        user_info = session.get('user', {})
+        user_name = user_info.get('name', 'anonymous')
+        
         # Server-side rate limiting: prevent clicks within 2 seconds
         if not check_rate_limit(user_id, video_id, 'like', min_seconds=2):
             return jsonify({
@@ -1176,7 +1182,7 @@ def toggle_like(video_id):
                 'error': 'Too many requests. Please wait a moment.'
             }), 429
         
-        likes, dislikes, action = engagement_tracker.toggle_like(video_id, user_id)
+        likes, dislikes, action = engagement_tracker.toggle_like(video_id, user_id, user_name)
         
         return jsonify({
             'success': True,
@@ -1200,6 +1206,10 @@ def toggle_dislike(video_id):
         user_id = data.get('user_id') or get_session_id()
         print(f"🔑 Dislike request - User ID: {user_id[:20]}...")
         
+        # Get user name from Entra ID session
+        user_info = session.get('user', {})
+        user_name = user_info.get('name', 'anonymous')
+        
         # Server-side rate limiting: prevent clicks within 2 seconds
         if not check_rate_limit(user_id, video_id, 'dislike', min_seconds=2):
             return jsonify({
@@ -1207,7 +1217,7 @@ def toggle_dislike(video_id):
                 'error': 'Too many requests. Please wait a moment.'
             }), 429
         
-        likes, dislikes, action = engagement_tracker.toggle_dislike(video_id, user_id)
+        likes, dislikes, action = engagement_tracker.toggle_dislike(video_id, user_id, user_name)
         
         return jsonify({
             'success': True,
@@ -1295,7 +1305,11 @@ def save_watch_position(video_id):
         position = data.get('position', 0)
         duration = data.get('duration', 0)
         
-        success = engagement_tracker.save_watch_position(video_id, user_id, position, duration)
+        # Get user name from Entra ID session
+        user_info = session.get('user', {})
+        user_name = user_info.get('name', 'anonymous')
+        
+        success = engagement_tracker.save_watch_position(video_id, user_id, position, duration, user_name)
         
         return jsonify({
             'success': success
