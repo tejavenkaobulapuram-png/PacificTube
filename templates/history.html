@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>視聴履歴 | Pacific Tube</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=20260424">
+    <style>
+        /* YouTube-style History Page - Enhanced Beautiful Design */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .history-container {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        .history-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .history-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-dropdown, .search-input {
+            padding: 10px 18px;
+            border: 2px solid #e8eaf6;
+            border-radius: 24px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .filter-dropdown:hover, .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+        }
+
+        .search-input {
+            width: 320px;
+            padding-left: 42px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 14px center;
+        }
+
+        .clear-history-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .clear-history-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .clear-history-btn:active {
+            transform: translateY(0);
+        }
+
+        .date-section {
+            margin-bottom: 40px;
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .date-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-item {
+            display: flex;
+            gap: 20px;
+            padding: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 12px;
+            background: #fafafa;
+        }
+
+        .history-item:hover {
+            background: #f0f4ff;
+            transform: translateX(4px);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+        }
+
+        .history-thumbnail {
+            position: relative;
+            width: 280px;
+            height: 158px;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover .history-thumbnail {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+
+        .history-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(4px);
+        }
+
+        .progress-bar-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: rgba(255,255,255,0.3);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000 0%, #ff6b6b 100%);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        .history-details {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .history-video-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.4;
+        }
+
+        .history-item:hover .history-video-title {
+            color: #667eea;
+        }
+
+        .history-meta {
+            font-size: 14px;
+            color: #606060;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-meta::before {
+            content: "⏱️";
+            font-size: 16px;
+        }
+
+        .history-watched-time {
+            font-size: 13px;
+            color: #888;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .completion-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .action-btn {
+            padding: 6px 16px;
+            background: white;
+            border: 2px solid #e8eaf6;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #667eea;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .no-history {
+            text-align: center;
+            padding: 80px 24px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .no-history-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .no-history-text {
+            font-size: 20px;
+            color: #606060;
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 18px;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .back-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .history-header {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .history-controls {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .history-item {
+                flex-direction: column;
+            }
+
+            .history-thumbnail {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 16/9;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="history-container">
+        <a href="/" class="back-btn">
+            ← ホームに戻る
+        </a>
+
+        <div class="history-header">
+            <h1 class="history-title">📜 視聴履歴</h1>
+            <div class="history-controls">
+                <input type="text" class="search-input" id="searchInput" placeholder="履歴を検索...">
+                <select class="filter-dropdown" id="dateFilter">
+                    <option value="7">📅 過去7日間</option>
+                    <option value="30" selected>📅 過去30日間</option>
+                    <option value="90">📅 過去90日間</option>
+                    <option value="all">📅 すべて</option>
+                </select>
+                <button class="clear-history-btn" id="clearHistoryBtn" onclick="confirmClearHistory()">
+                    🗑️ 履歴をクリア
+                </button>
+            </div>
+        </div>
+
+        <div id="loadingIndicator" class="loading">
+            読み込み中...
+        </div>
+
+        <div id="historyContent" style="display: none;">
+            <!-- History items will be inserted here by JavaScript -->
+        </div>
+
+        <div id="noHistory" class="no-history" style="display: none;">
+            <div class="no-history-icon">📺</div>
+            <div class="no-history-text">まだ視聴履歴がありません</div>
+            <p style="color: #999; margin-top: 16px; font-size: 14px;">動画を視聴すると、ここに履歴が表示されます</p>
+        </div>
+    </div>
+
+    <script>
+        let allHistory = [];
+
+        // Load history on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistory();
+
+            // Add event listeners
+            document.getElementById('dateFilter').addEventListener('change', loadHistory);
+            document.getElementById('searchInput').addEventListener('input', filterHistory);
+        });
+
+        async function loadHistory() {
+            const dateFilter = document.getElementById('dateFilter').value;
+            const loadingEl = document.getElementById('loadingIndicator');
+            const contentEl = document.getElementById('historyContent');
+            const noHistoryEl = document.getElementById('noHistory');
+
+            loadingEl.style.display = 'block';
+            contentEl.style.display = 'none';
+            noHistoryEl.style.display = 'none';
+
+            try {
+                const response = await fetch(`/api/history?days=${dateFilter}`);
+                const data = await response.json();
+
+                loadingEl.style.display = 'none';
+
+                if (data.success && data.history && data.history.length > 0) {
+                    // YouTube-style: Deduplicate videos, keep only most recent watch
+                    allHistory = deduplicateHistory(data.history);
+                    displayHistory(allHistory);
+                } else {
+                    noHistoryEl.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading history:', error);
+                loadingEl.style.display = 'none';
+                noHistoryEl.style.display = 'block';
+            }
+        }
+
+        function deduplicateHistory(history) {
+            // Group by videoId and keep only the most recent watch (like YouTube)
+            const videoMap = new Map();
+            
+            history.forEach(item => {
+                const existing = videoMap.get(item.videoId);
+                if (!existing || new Date(item.watchedAt) > new Date(existing.watchedAt)) {
+                    videoMap.set(item.videoId, item);
+                }
+            });
+            
+            // Convert back to array and sort by most recent
+            return Array.from(videoMap.values()).sort((a, b) => 
+                new Date(b.watchedAt) - new Date(a.watchedAt)
+            );
+        }
+
+        function filterHistory() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allHistory.filter(item => 
+                item.videoName.toLowerCase().includes(searchQuery)
+            );
+            displayHistory(filtered);
+        }
+
+        function displayHistory(history) {
+            const contentEl = document.getElementById('historyContent');
+            contentEl.style.display = 'block';
+            contentEl.innerHTML = '';
+
+            if (history.length === 0) {
+                document.getElementById('noHistory').style.display = 'block';
+                contentEl.style.display = 'none';
+                return;
+            }
+
+            // Group by date
+            const grouped = groupByDate(history);
+
+            for (const [dateLabel, items] of Object.entries(grouped)) {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'date-section';
+
+                const dateHeader = document.createElement('div');
+                dateHeader.className = 'date-header';
+                dateHeader.textContent = dateLabel;
+                sectionDiv.appendChild(dateHeader);
+
+                items.forEach(item => {
+                    const itemDiv = createHistoryItem(item);
+                    sectionDiv.appendChild(itemDiv);
+                });
+
+                contentEl.appendChild(sectionDiv);
+            }
+        }
+
+        function groupByDate(history) {
+            const groups = {};
+            const now = new Date();
+            
+            // Set time to midnight for accurate day comparison
+            now.setHours(0, 0, 0, 0);
+
+            history.forEach(item => {
+                // Parse watchedAt properly - handle ISO datetime
+                let watchedDate = new Date(item.watchedAt);
+                
+                // Validate date
+                if (isNaN(watchedDate.getTime())) {
+                    console.error('Invalid date:', item.watchedAt);
+                    watchedDate = new Date(); // Fallback to now
+                }
+                
+                // Set to midnight for comparison
+                const watchedDateMidnight = new Date(watchedDate);
+                watchedDateMidnight.setHours(0, 0, 0, 0);
+                
+                const diffMs = now - watchedDateMidnight;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+                let label;
+                if (diffDays === 0) {
+                    label = '今日';
+                } else if (diffDays === 1) {
+                    label = '昨日';
+                } else if (diffDays < 7) {
+                    label = `${diffDays}日前`;
+                } else {
+                    label = watchedDate.toLocaleDateString('ja-JP', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                }
+
+                if (!groups[label]) {
+                    groups[label] = [];
+                }
+                groups[label].push(item);
+            });
+
+            return groups;
+        }
+
+        function createHistoryItem(item) {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'history-item';
+            itemDiv.onclick = () => playVideo(item.videoId, item.videoName);
+
+            const completionRate = item.completionRate || 0;
+            const watchedMinutes = Math.floor(item.durationWatched / 60);
+            const watchedSeconds = item.durationWatched % 60;
+            const totalMinutes = Math.floor(item.videoDuration / 60);
+            const totalSeconds = item.videoDuration % 60;
+            
+            // Format duration for badge (MM:SS)
+            const totalDuration = `${totalMinutes}:${String(totalSeconds).padStart(2, '0')}`;
+            
+            // Parse date safely
+            const watchedDate = new Date(item.watchedAt);
+            const watchedTime = !isNaN(watchedDate.getTime()) 
+                ? watchedDate.toLocaleString('ja-JP', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                : '不明な時刻';
+
+            itemDiv.innerHTML = `
+                <div class="history-thumbnail">
+                    <img src="/api/thumbnail/${encodeURIComponent(item.videoId)}" 
+                         alt="${escapeHtml(item.videoName)}"
+                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'280\\' height=\\'158\\'%3E%3Cdefs%3E%3ClinearGradient id=\\'grad\\' x1=\\'0%25\\' y1=\\'0%25\\' x2=\\'100%25\\' y2=\\'100%25\\'%3E%3Cstop offset=\\'0%25\\' style=\\'stop-color:%23667eea;stop-opacity:1\\' /%3E%3Cstop offset=\\'100%25\\' style=\\'stop-color:%23764ba2;stop-opacity:1\\' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill=\\'url(%23grad)\\' width=\\'280\\' height=\\'158\\'/%3E%3Ctext fill=\\'%23fff\\' x=\\'50%25\\' y=\\'50%25\\' text-anchor=\\'middle\\' dy=\\'.3em\\' font-size=\\'18\\' font-family=\\'Arial\\'%3E📺 サムネイルなし%3C/text%3E%3C/svg%3E'">
+                    <div class="video-duration">${totalDuration}</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: ${completionRate}%"></div>
+                    </div>
+                </div>
+                <div class="history-details">
+                    <div class="history-video-title">${escapeHtml(item.videoName)}</div>
+                    <div class="history-meta">
+                        ${watchedMinutes}分${watchedSeconds}秒 / ${totalMinutes}分${totalSeconds}秒 視聴
+                        <span class="completion-badge">${Math.round(completionRate)}% 完了</span>
+                    </div>
+                    <div class="history-watched-time">
+                        📅 ${watchedTime}
+                    </div>
+                    <div class="history-actions">
+                        <button class="action-btn" onclick="event.stopPropagation(); removeFromHistory('${item.videoId}', '${item.watchedAt}')">
+                            🗑️ 削除
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            return itemDiv;
+        }
+
+        function playVideo(videoId, videoName) {
+            // Redirect to home page and open the video
+            window.location.href = `/?video=${encodeURIComponent(videoId)}`;
+        }
+
+        function removeFromHistory(videoId, watchedAt) {
+            if (confirm('この動画を履歴から削除しますか？')) {
+                // TODO: Implement remove from history API
+                alert('この機能は開発中です');
+            }
+        }
+
+        function confirmClearHistory() {
+            if (confirm('すべての視聴履歴を削除しますか？この操作は取り消せません。')) {
+                // TODO: Implement clear all history API
+                alert('この機能は開発中です');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

@@ -125,13 +125,15 @@ class TelemetryTracker:
         if table_service:
             try:
                 table_client = table_service.get_table_client(TABLE_NAMES['watch_history'])
+                watch_time = datetime.now(timezone.utc)
                 entity = {
                     'PartitionKey': user_id,
                     'RowKey': str(uuid.uuid4()),
-                    'Timestamp': datetime.now(timezone.utc),
+                    'WatchedAt': watch_time,  # Custom timestamp field
                     'UserId': user_id,
                     'UserName': user_name,
                     'VideoPath': video_path,
+                    'VideoId': video_path,  # Add VideoId for history queries
                     'VideoName': video_name,
                     'Folder': folder,
                     'DurationWatched': duration_watched,

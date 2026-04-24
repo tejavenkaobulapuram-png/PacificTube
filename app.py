@@ -31,13 +31,13 @@ from flask import Flask, render_template, jsonify, request, send_file, session, 
 from flask_caching import Cache
 from azure.storage.blob import BlobServiceClient, ContainerClient
 import config
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 from view_tracker import ViewTracker
 from cloud_view_tracker import CloudViewTracker
 from engagement_tracker import EngagementTracker
 from entra_auth import EntraIDAuth, setup_auth_routes
-from telemetry import TelemetryTracker, initialize_tables
+from telemetry import TelemetryTracker, initialize_tables, table_service, TABLE_NAMES
 from dashboard import dashboard_bp
 from feedback import feedback_bp
 import os
@@ -1316,6 +1316,88 @@ def save_watch_position(video_id):
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/history')
+def viewing_history():
+    """YouTube-style viewing history page"""
+    return render_template('history.html')
+
+
+@app.route('/api/history')
+def get_viewing_history():
+    """API endpoint to fetch user's viewing history from Table Storage"""
+    try:
+        # Get user info from Entra ID session
+        user_info = session.get('user', {})
+        user_id = user_info.get('oid', 'anonymous')
+        
+        if user_id == 'anonymous':
+            return jsonify({'success': False, 'history': [], 'message': 'Please log in to view history'}), 401
+        
+        # Check if table service is configured
+        if not table_service:
+            return jsonify({'success': False, 'history': [], 'message': 'Storage not configured'}), 503
+        
+        # Get filter parameters
+        days = request.args.get('days', '30')  # Default 30 days
+        search_query = request.args.get('search', '').lower()
+        
+        # Calculate date range
+        end_time = datetime.now(timezone.utc)
+        if days == 'all':
+            start_time = datetime(2020, 1, 1, tzinfo=timezone.utc)  # All history
+        else:
+            start_time = end_time - timedelta(days=int(days))
+        
+        # Query Table Storage
+        watch_table = table_service.get_table_client(TABLE_NAMES['watch_history'])
+        
+        # Query watch history for this user
+        # Use Timestamp in filter (always exists), but display WatchedAt (custom field)
+        filter_query = f"PartitionKey eq '{user_id}' and Timestamp ge datetime'{start_time.isoformat()}'"
+        entities = watch_table.query_entities(filter_query)
+        
+        history = []
+        for entity in entities:
+            video_name = entity.get('VideoName', 'Unknown Video')
+            video_id = entity.get('VideoId', '') or entity.get('VideoPath', '')
+            
+            # Apply search filter if provided
+            if search_query and search_query not in video_name.lower():
+                continue
+            
+            # Get timestamp - prefer WatchedAt (custom), fallback to Timestamp (system)
+            watched_at = entity.get('WatchedAt') or entity.get('Timestamp')
+            watched_at_str = watched_at.isoformat() if watched_at else datetime.now(timezone.utc).isoformat()
+            
+            history_item = {
+                'videoId': video_id,
+                'videoName': video_name,
+                'watchedAt': watched_at_str,
+                'durationWatched': entity.get('DurationWatched', 0),
+                'videoDuration': entity.get('VideoDuration', 0),
+                'completionRate': entity.get('CompletionRate', 0),
+                'ipAddress': entity.get('IpAddress', ''),
+                'userAgent': entity.get('UserAgent', '')
+            }
+            history.append(history_item)
+        
+        # Sort by watched time (most recent first)
+        history.sort(key=lambda x: x['watchedAt'], reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'history': history,
+            'count': len(history)
+        })
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error fetching viewing history: {e}")
+        print(f"Full traceback:\n{error_details}")
+        return jsonify({'success': False, 'error': str(e), 'history': []}), 500
 
 
 # Download feature temporarily disabled (can be restored by uncommenting)
