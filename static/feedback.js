@@ -141,7 +141,7 @@ async function submitFeedback() {
         const data = await response.json();
         
         if (data.success) {
-            alert('フィードバックを送信しました。ありがとうございます！');
+            // Success - close modal without alert popup
             closeFeedbackModal();
         } else {
             alert('エラー: ' + data.message);
@@ -187,11 +187,6 @@ function displayStatistics(stats) {
     document.getElementById('positiveCount').textContent = stats.overallRatingBreakdown.positive || 0;
     document.getElementById('negativeCount').textContent = stats.overallRatingBreakdown.negative || 0;
     
-    // Status counts
-    document.getElementById('newStatusCount').textContent = stats.statusBreakdown.new || 0;
-    document.getElementById('reviewedStatusCount').textContent = stats.statusBreakdown.reviewed || 0;
-    document.getElementById('resolvedStatusCount').textContent = stats.statusBreakdown.resolved || 0;
-    
     // Detailed count
     document.getElementById('detailedCount').textContent = stats.detailedCount || 0;
 }
@@ -202,7 +197,7 @@ function displayFeedbackList(feedbackList) {
     tableBody.innerHTML = '';
     
     if (feedbackList.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="10" class="no-data">データがありません</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8" class="no-data">データがありません</td></tr>';
         return;
     }
     
@@ -241,9 +236,6 @@ function displayFeedbackList(feedbackList) {
             minute: '2-digit'
         });
         
-        const adminMemo = feedback.adminMemo || '';
-        const adminMemoDisplay = adminMemo ? (adminMemo.length > 30 ? adminMemo.substring(0, 30) + '...' : adminMemo) : '-';
-        
         row.innerHTML = `
             <td class="row-number">${index + 1}</td>
             <td class="datetime-cell">${datetime}</td>
@@ -252,8 +244,6 @@ function displayFeedbackList(feedbackList) {
             <td class="rating-stars">${stars}</td>
             <td class="overall-rating-icon">${overallIcon}</td>
             <td class="feedback-content">${escapeHtml(feedback.feedbackText)}</td>
-            <td class="admin-memo-cell">${adminMemo ? escapeHtml(adminMemoDisplay) : '-'}</td>
-            <td><span class="status-badge status-${statusClass}">${statusText}</span></td>
             <td class="action-buttons">
                 <button class="action-btn btn-edit" onclick='openDetailModal(${JSON.stringify(feedback).replace(/'/g, "&apos;")})'>詳細</button>
             </td>
@@ -327,7 +317,7 @@ async function updateFeedbackStatus(feedbackId, partitionKey, newStatus) {
         const data = await response.json();
         
         if (data.success) {
-            alert('ステータスを更新しました');
+            // Success - reload data without alert popup
             await loadFeedbackData(); // Reload data
         } else {
             alert('エラー: ' + data.message);
@@ -439,7 +429,7 @@ async function updateFeedbackDetail() {
         const data = await response.json();
         
         if (data.success) {
-            alert('更新しました');
+            // Success - close modal and reload without alert popup
             closeDetailModal();
             await loadFeedbackDataForPage(); // Reload data
         } else {

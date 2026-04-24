@@ -267,7 +267,7 @@ body {
     border-bottom: 2px solid #7dd3fc;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    height: 36px; /* Compact height */
+    height: 28px; /* Smaller height */
     z-index: 999;
     position: sticky;
     top: 56px; /* Below header */
@@ -276,20 +276,25 @@ body {
 .warning-scroll-container {
     display: flex;
     white-space: nowrap;
-    animation: scroll-left-warning 50s linear infinite;
+    justify-content: center;
+    /* Animation removed - static text */
 }
 
 .warning-scroll-text {
     display: inline-block;
-    padding: 0 50px;
-    font-size: 13px;
+    padding: 0 20px;
+    font-size: 11px; /* Smaller text */
     color: #000; /* Black color */
     font-weight: normal; /* Not bold */
-    line-height: 32px;
+    line-height: 28px; /* Match box height */
     font-style: italic;
 }
 
-/* Scrolling animation - right to left */
+.warning-scroll-text[aria-hidden="true"] {
+    display: none; /* Hide duplicate for static display */
+}
+
+/* Animation removed for static display */
 @keyframes scroll-left-warning {
     0% {
         transform: translateX(0);
@@ -299,9 +304,9 @@ body {
     }
 }
 
-/* Pause animation on hover */
+/* Hover effect removed - no animation */
 .warning-notice-banner:hover .warning-scroll-container {
-    animation-play-state: paused;
+    /* No animation to pause */
 }
 
 /* Hide banner when video modal is open */
@@ -1814,27 +1819,27 @@ body:has(.video-modal.active) .warning-notice-banner {
     left: 0;
     right: 0;
     background-color: #e0f2fe; /* Sky lite blue */
-    border-top: 2px solid #7dd3fc;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    border-top: 1px solid #7dd3fc;
+    box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.1);
     z-index: 9999;
-    padding: 8px 0;
+    padding: 2px 0; /* Minimal padding */
     overflow: hidden;
-    height: 40px; /* Compact height */
+    height: 20px; /* Much smaller height */
 }
 
 .privacy-scroll-container {
     display: flex;
     white-space: nowrap;
-    animation: scroll-left 60s linear infinite;
+    animation: scroll-marquee-rtl 40s linear infinite;
 }
 
 .privacy-scroll-text {
     display: inline-block;
     padding: 0 50px;
-    font-size: 13px;
+    font-size: 9px; /* Smaller text */
     color: #000; /* Black color */
     font-style: italic;
-    line-height: 24px;
+    line-height: 16px; /* Match smaller box */
     font-weight: normal; /* Not bold */
 }
 
@@ -1849,13 +1854,13 @@ body:has(.video-modal.active) .warning-notice-banner {
     font-weight: normal;
 }
 
-/* Scrolling animation - right to left */
-@keyframes scroll-left {
+/* Right-to-Left Marquee: Text scrolls from RIGHT to LEFT */
+@keyframes scroll-marquee-rtl {
     0% {
         transform: translateX(0);
     }
     100% {
-        transform: translateX(-50%);
+        transform: translateX(-50%); /* Move leftward = text scrolls right-to-left */
     }
 }
 
@@ -1867,17 +1872,17 @@ body:has(.video-modal.active) .warning-notice-banner {
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .privacy-notice-banner {
-        height: 36px;
-        padding: 6px 0;
+        height: 18px; /* Even smaller for mobile */
+        padding: 2px 0;
     }
     
     .privacy-scroll-text {
-        font-size: 12px;
-        line-height: 24px;
+        font-size: 8px; /* Smaller for mobile */
+        line-height: 14px;
         padding: 0 30px;
     }
     
     .privacy-scroll-container {
-        animation: scroll-left 45s linear infinite;
+        animation: scroll-marquee-rtl 40s linear infinite;
     }
 }
