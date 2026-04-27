@@ -389,42 +389,83 @@ def get_active_users(period):
         # Count logins and capture email
         try:
             session_table = table_service.get_table_client(TABLE_NAMES['user_sessions'])
-            filter_query = f"Timestamp ge datetime'{start_time.isoformat()}' and EventType eq 'Login'"
-            entities = session_table.query_entities(filter_query)
+            # Query all logins
+            entities = list(session_table.query_entities("EventType eq 'Login'"))
+            print(f"DEBUG: Found {len(entities)} login entities, period={period}, start_time={start_time}")
+            
+            counted_logins = 0
+            skipped_logins = 0
+            
             for entity in entities:
                 user_id = entity.get('UserId', 'unknown')
+                
+                # Always capture user basic info
                 user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
                 user_stats[user_id]['userEmail'] = entity.get('UserEmail', '')
-                user_stats[user_id]['logins'] += 1
-                user_stats[user_id]['totalEvents'] += 1
                 
-                # Track active days
+                # Get timestamp
                 timestamp = entity.get('Timestamp')
-                if timestamp:
-                    # Ensure timestamp is a datetime object
-                    if isinstance(timestamp, str):
-                        from dateutil import parser
-                        timestamp = parser.parse(timestamp)
+                if not timestamp:
+                    print(f"DEBUG: Login entity has no timestamp")
+                    continue
+                
+                # Ensure timestamp is a datetime object
+                if isinstance(timestamp, str):
+                    from dateutil import parser
+                    timestamp = parser.parse(timestamp)
+                
+                print(f"DEBUG: Login timestamp type: {type(timestamp)}, value: {timestamp}")
+                
+                # VERY simple comparison - if after 90 days ago, count it
+                # For 90d period, we're very generous
+                try:
+                    # Count everything for now to debug
+                    user_stats[user_id]['logins'] += 1
+                    user_stats[user_id]['totalEvents'] += 1
+                    counted_logins += 1
                     
-                    date_key = timestamp.strftime('%Y-%m-%d')
+                    # Track active days
+                    date_key = str(timestamp)[:10]  # Simple YYYY-MM-DD extraction
                     user_stats[user_id]['activeDays'].add(date_key)
                     
                     # Update last seen
-                    if user_stats[user_id]['lastSeen'] is None or timestamp > user_stats[user_id]['lastSeen']:
+                    if user_stats[user_id]['lastSeen'] is None:
                         user_stats[user_id]['lastSeen'] = timestamp
+                    elif timestamp > user_stats[user_id]['lastSeen']:
+                        user_stats[user_id]['lastSeen'] = timestamp
+                        
+                except Exception as e:
+                    print(f"DEBUG: Error counting login: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    
+            print(f"DEBUG: Counted {counted_logins} logins, skipped {skipped_logins}")
+            
         except Exception as e:
             print(f"Error querying logins: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Count video views
         try:
             watch_table = table_service.get_table_client(TABLE_NAMES['watch_history'])
-            # Query all watch history in the period (no timestamp filter since we use WatchedAt)
+            # Query all watch history
             entities = list(watch_table.query_entities(""))
+            print(f"DEBUG: Found {len(entities)} watch_history entities")
+            
+            counted_views = 0
             
             for entity in entities:
-                # Check if within time period using WatchedAt or Timestamp
+                user_id = entity.get('UserId', 'unknown')
+                
+                # Always capture user basic info
+                if user_stats[user_id]['userName'] == 'Anonymous':
+                    user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
+                
+                # Get timestamp
                 watched_at = entity.get('WatchedAt') or entity.get('Timestamp')
                 if not watched_at:
+                    print(f"DEBUG: Watch entity has no timestamp")
                     continue
                 
                 # Ensure timestamp is a datetime object
@@ -432,22 +473,31 @@ def get_active_users(period):
                     from dateutil import parser
                     watched_at = parser.parse(watched_at)
                 
-                # Skip if outside our time range
-                if watched_at < start_time:
-                    continue
+                print(f"DEBUG: Video view timestamp type: {type(watched_at)}, value: {watched_at}")
                 
-                user_id = entity.get('UserId', 'unknown')
-                user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
-                user_stats[user_id]['videoViews'] += 1
-                user_stats[user_id]['totalEvents'] += 1
-                
-                # Track active days
-                date_key = watched_at.strftime('%Y-%m-%d')
-                user_stats[user_id]['activeDays'].add(date_key)
-                
-                # Update last seen
-                if user_stats[user_id]['lastSeen'] is None or watched_at > user_stats[user_id]['lastSeen']:
-                    user_stats[user_id]['lastSeen'] = watched_at
+                # Count everything for now to debug
+                try:
+                    user_stats[user_id]['videoViews'] += 1
+                    user_stats[user_id]['totalEvents'] += 1
+                    counted_views += 1
+                    
+                    # Track active days
+                    date_key = str(watched_at)[:10]
+                    user_stats[user_id]['activeDays'].add(date_key)
+                    
+                    # Update last seen
+                    if user_stats[user_id]['lastSeen'] is None:
+                        user_stats[user_id]['lastSeen'] = watched_at
+                    elif watched_at > user_stats[user_id]['lastSeen']:
+                        user_stats[user_id]['lastSeen'] = watched_at
+                        
+                except Exception as e:
+                    print(f"DEBUG: Error counting video view: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    
+            print(f"DEBUG: Counted {counted_views} video views")
+            
         except Exception as e:
             print(f"Error querying video views: {e}")
             import traceback
@@ -456,58 +506,114 @@ def get_active_users(period):
         # Count searches
         try:
             search_table = table_service.get_table_client(TABLE_NAMES['search_logs'])
-            filter_query = f"Timestamp ge datetime'{start_time.isoformat()}'"
-            entities = search_table.query_entities(filter_query)
+            entities = list(search_table.query_entities(""))
+            print(f"DEBUG: Found {len(entities)} search_logs entities")
+            
             for entity in entities:
                 user_id = entity.get('UserId', 'unknown')
-                user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
-                user_stats[user_id]['searches'] += 1
-                user_stats[user_id]['totalEvents'] += 1
                 
-                # Track active days
+                # Always capture user basic info
+                if user_stats[user_id]['userName'] == 'Anonymous':
+                    user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
+                
                 timestamp = entity.get('Timestamp')
-                if timestamp:
-                    # Ensure timestamp is a datetime object
-                    if isinstance(timestamp, str):
-                        from dateutil import parser
-                        timestamp = parser.parse(timestamp)
+                if not timestamp:
+                    continue
+                
+                # Ensure timestamp is a datetime object
+                if isinstance(timestamp, str):
+                    from dateutil import parser
+                    timestamp = parser.parse(timestamp)
+                
+                # Simple datetime comparison
+                try:
+                    ts_naive = timestamp.replace(tzinfo=None) if timestamp.tzinfo else timestamp
+                    start_naive = start_time.replace(tzinfo=None)
                     
-                    date_key = timestamp.strftime('%Y-%m-%d')
-                    user_stats[user_id]['activeDays'].add(date_key)
-                    
-                    # Update last seen
-                    if user_stats[user_id]['lastSeen'] is None or timestamp > user_stats[user_id]['lastSeen']:
-                        user_stats[user_id]['lastSeen'] = timestamp
+                    if ts_naive >= start_naive:
+                        user_stats[user_id]['searches'] += 1
+                        user_stats[user_id]['totalEvents'] += 1
+                        
+                        # Track active days
+                        date_key = timestamp.strftime('%Y-%m-%d')
+                        user_stats[user_id]['activeDays'].add(date_key)
+                except Exception as e:
+                    print(f"DEBUG: Error in date comparison for search: {e}, counting anyway")
+                    user_stats[user_id]['searches'] += 1
+                    user_stats[user_id]['totalEvents'] += 1
+                
+                # Update last seen regardless of period
+                current_last_seen = user_stats[user_id]['lastSeen']
+                if current_last_seen is None:
+                    user_stats[user_id]['lastSeen'] = timestamp
+                else:
+                    try:
+                        ts_naive = timestamp.replace(tzinfo=None) if timestamp.tzinfo else timestamp
+                        current_naive = current_last_seen.replace(tzinfo=None) if current_last_seen.tzinfo else current_last_seen
+                        if ts_naive > current_naive:
+                            user_stats[user_id]['lastSeen'] = timestamp
+                    except:
+                        pass
         except Exception as e:
             print(f"Error querying searches: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Count comments
         try:
             comment_table = table_service.get_table_client(TABLE_NAMES['comments'])
-            filter_query = f"Timestamp >= datetime'{start_time.isoformat()}'"
-            entities = comment_table.query_entities(filter_query)
+            entities = list(comment_table.query_entities(""))
+            print(f"DEBUG: Found {len(entities)} comments entities")
+            
             for entity in entities:
                 user_id = entity.get('UserId', 'unknown')
-                user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
-                user_stats[user_id]['comments'] += 1
-                user_stats[user_id]['totalEvents'] += 1
                 
-                # Track active days
+                # Always capture user basic info
+                if user_stats[user_id]['userName'] == 'Anonymous':
+                    user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
+                
                 timestamp = entity.get('Timestamp')
-                if timestamp:
-                    # Ensure timestamp is a datetime object
-                    if isinstance(timestamp, str):
-                        from dateutil import parser
-                        timestamp = parser.parse(timestamp)
+                if not timestamp:
+                    continue
+                
+                # Ensure timestamp is a datetime object
+                if isinstance(timestamp, str):
+                    from dateutil import parser
+                    timestamp = parser.parse(timestamp)
+                
+                # Simple datetime comparison
+                try:
+                    ts_naive = timestamp.replace(tzinfo=None) if timestamp.tzinfo else timestamp
+                    start_naive = start_time.replace(tzinfo=None)
                     
-                    date_key = timestamp.strftime('%Y-%m-%d')
-                    user_stats[user_id]['activeDays'].add(date_key)
-                    
-                    # Update last seen
-                    if user_stats[user_id]['lastSeen'] is None or timestamp > user_stats[user_id]['lastSeen']:
-                        user_stats[user_id]['lastSeen'] = timestamp
+                    if ts_naive >= start_naive:
+                        user_stats[user_id]['comments'] += 1
+                        user_stats[user_id]['totalEvents'] += 1
+                        
+                        # Track active days
+                        date_key = timestamp.strftime('%Y-%m-%d')
+                        user_stats[user_id]['activeDays'].add(date_key)
+                except Exception as e:
+                    print(f"DEBUG: Error in date comparison for comment: {e}, counting anyway")
+                    user_stats[user_id]['comments'] += 1
+                    user_stats[user_id]['totalEvents'] += 1
+                
+                # Update last seen regardless of period
+                current_last_seen = user_stats[user_id]['lastSeen']
+                if current_last_seen is None:
+                    user_stats[user_id]['lastSeen'] = timestamp
+                else:
+                    try:
+                        ts_naive = timestamp.replace(tzinfo=None) if timestamp.tzinfo else timestamp
+                        current_naive = current_last_seen.replace(tzinfo=None) if current_last_seen.tzinfo else current_last_seen
+                        if ts_naive > current_naive:
+                            user_stats[user_id]['lastSeen'] = timestamp
+                    except:
+                        pass
         except Exception as e:
             print(f"Error querying comments: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Convert to list
         data = []
@@ -515,55 +621,68 @@ def get_active_users(period):
             # Get the actual last seen by querying most recent activity across all tables (without time filter)
             last_seen_timestamp = None
             
+            def compare_and_update_timestamp(ts, current_last):
+                """Helper to safely compare timestamps with timezone handling"""
+                if ts is None:
+                    return current_last
+                if isinstance(ts, str):
+                    from dateutil import parser
+                    ts = parser.parse(ts)
+                
+                if current_last is None:
+                    return ts
+                
+                # Make both timezone-naive for comparison
+                ts_naive = ts.replace(tzinfo=None) if ts.tzinfo else ts
+                current_naive = current_last.replace(tzinfo=None) if current_last.tzinfo else current_last
+                
+                return ts if ts_naive > current_naive else current_last
+            
             # Check user_sessions for latest login
             try:
                 session_table = table_service.get_table_client(TABLE_NAMES['user_sessions'])
                 filter_query = f"PartitionKey eq '{user_id}'"
                 entities = list(session_table.query_entities(filter_query, select=['Timestamp']))
-                if entities:
-                    for entity in entities:
-                        ts = entity.get('Timestamp')
-                        if ts and (last_seen_timestamp is None or ts > last_seen_timestamp):
-                            last_seen_timestamp = ts
-            except:
-                pass
+                for entity in entities:
+                    ts = entity.get('Timestamp')
+                    last_seen_timestamp = compare_and_update_timestamp(ts, last_seen_timestamp)
+            except Exception as e:
+                print(f"Error getting last seen from sessions for {user_id}: {e}")
             
             # Check watch_history for latest video view
             try:
                 watch_table = table_service.get_table_client(TABLE_NAMES['watch_history'])
                 filter_query = f"PartitionKey eq '{user_id}'"
                 entities = list(watch_table.query_entities(filter_query, select=['Timestamp', 'WatchedAt']))
-                if entities:
-                    for entity in entities:
-                        ts = entity.get('WatchedAt') or entity.get('Timestamp')
-                        if ts and (last_seen_timestamp is None or ts > last_seen_timestamp):
-                            last_seen_timestamp = ts
-            except:
-                pass
+                for entity in entities:
+                    ts = entity.get('WatchedAt') or entity.get('Timestamp')
+                    last_seen_timestamp = compare_and_update_timestamp(ts, last_seen_timestamp)
+            except Exception as e:
+                print(f"Error getting last seen from watch_history for {user_id}: {e}")
             
             # Check search_logs for latest search
             try:
                 search_table = table_service.get_table_client(TABLE_NAMES['search_logs'])
                 filter_query = f"PartitionKey eq '{user_id}'"
                 entities = list(search_table.query_entities(filter_query, select=['Timestamp']))
-                if entities:
-                    for entity in entities:
-                        ts = entity.get('Timestamp')
-                        if ts and (last_seen_timestamp is None or ts > last_seen_timestamp):
-                            last_seen_timestamp = ts
-            except:
-                pass
+                for entity in entities:
+                    ts = entity.get('Timestamp')
+                    last_seen_timestamp = compare_and_update_timestamp(ts, last_seen_timestamp)
+            except Exception as e:
+                print(f"Error getting last seen from search_logs for {user_id}: {e}")
             
-            # Format lastSeen
-            if last_seen_timestamp:
-                if isinstance(last_seen_timestamp, str):
+            # Format lastSeen - use the timestamp we found or fallback to stats
+            final_last_seen = last_seen_timestamp if last_seen_timestamp else stats['lastSeen']
+            
+            if final_last_seen:
+                if isinstance(final_last_seen, str):
                     from dateutil import parser
-                    last_seen_timestamp = parser.parse(last_seen_timestamp)
-                last_seen_str = last_seen_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    final_last_seen = parser.parse(final_last_seen)
+                last_seen_str = final_last_seen.strftime('%Y-%m-%d %H:%M:%S')
             else:
-                # Fallback to stats lastSeen if available
-                last_seen_str = stats['lastSeen'].strftime('%Y-%m-%d %H:%M:%S') if stats['lastSeen'] else 'Unknown'
+                last_seen_str = 'Unknown'
             
+            # Always include the user in the results
             data.append({
                 'userId': user_id,
                 'userName': stats['userName'],
@@ -577,6 +696,10 @@ def get_active_users(period):
                 'totalEvents': stats['totalEvents'],
                 'lastSeen': last_seen_str
             })
+        
+        print(f"DEBUG: Returning {len(data)} users")
+        if data:
+            print(f"DEBUG: Sample user data: {data[0]}")
         
         # Sort by total events
         data.sort(key=lambda x: x['totalEvents'], reverse=True)
