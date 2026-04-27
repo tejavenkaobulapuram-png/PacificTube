@@ -232,8 +232,18 @@ def get_trend_data(period):
                 entities = table_client.query_entities(filter_query)
                 
                 for entity in entities:
-                    timestamp = entity.get('Timestamp')
+                    # For watch_history, try WatchedAt first, then Timestamp
+                    if table_name == TABLE_NAMES['watch_history']:
+                        timestamp = entity.get('WatchedAt') or entity.get('Timestamp')
+                    else:
+                        timestamp = entity.get('Timestamp')
+                    
                     if timestamp:
+                        # Ensure timestamp is a datetime object
+                        if isinstance(timestamp, str):
+                            from dateutil import parser
+                            timestamp = parser.parse(timestamp)
+                        
                         date_key = timestamp.strftime('%Y-%m-%d')
                         daily_counts[date_key] += 1
             except Exception as e:
@@ -349,7 +359,7 @@ def get_active_users(period):
     """
     from azure.data.tables import TableServiceClient
     from telemetry import TABLE_NAMES
-    from collections import defaultdict, set as set_type
+    from collections import defaultdict
     
     valid_periods = {'7d': 7, '30d': 30, '90d': 90}
     days = valid_periods.get(period, 7)
@@ -391,11 +401,16 @@ def get_active_users(period):
                 # Track active days
                 timestamp = entity.get('Timestamp')
                 if timestamp:
+                    # Ensure timestamp is a datetime object
+                    if isinstance(timestamp, str):
+                        from dateutil import parser
+                        timestamp = parser.parse(timestamp)
+                    
                     date_key = timestamp.strftime('%Y-%m-%d')
                     user_stats[user_id]['activeDays'].add(date_key)
                     
                     # Update last seen
-                    if not user_stats[user_id]['lastSeen'] or timestamp > user_stats[user_id]['lastSeen']:
+                    if user_stats[user_id]['lastSeen'] is None or timestamp > user_stats[user_id]['lastSeen']:
                         user_stats[user_id]['lastSeen'] = timestamp
         except Exception as e:
             print(f"Error querying logins: {e}")
@@ -414,11 +429,16 @@ def get_active_users(period):
                 # Track active days
                 timestamp = entity.get('Timestamp') or entity.get('WatchedAt')
                 if timestamp:
+                    # Ensure timestamp is a datetime object
+                    if isinstance(timestamp, str):
+                        from dateutil import parser
+                        timestamp = parser.parse(timestamp)
+                    
                     date_key = timestamp.strftime('%Y-%m-%d')
                     user_stats[user_id]['activeDays'].add(date_key)
                     
                     # Update last seen
-                    if not user_stats[user_id]['lastSeen'] or timestamp > user_stats[user_id]['lastSeen']:
+                    if user_stats[user_id]['lastSeen'] is None or timestamp > user_stats[user_id]['lastSeen']:
                         user_stats[user_id]['lastSeen'] = timestamp
         except Exception as e:
             print(f"Error querying video views: {e}")
@@ -437,11 +457,16 @@ def get_active_users(period):
                 # Track active days
                 timestamp = entity.get('Timestamp')
                 if timestamp:
+                    # Ensure timestamp is a datetime object
+                    if isinstance(timestamp, str):
+                        from dateutil import parser
+                        timestamp = parser.parse(timestamp)
+                    
                     date_key = timestamp.strftime('%Y-%m-%d')
                     user_stats[user_id]['activeDays'].add(date_key)
                     
                     # Update last seen
-                    if not user_stats[user_id]['lastSeen'] or timestamp > user_stats[user_id]['lastSeen']:
+                    if user_stats[user_id]['lastSeen'] is None or timestamp > user_stats[user_id]['lastSeen']:
                         user_stats[user_id]['lastSeen'] = timestamp
         except Exception as e:
             print(f"Error querying searches: {e}")
@@ -460,11 +485,16 @@ def get_active_users(period):
                 # Track active days
                 timestamp = entity.get('Timestamp')
                 if timestamp:
+                    # Ensure timestamp is a datetime object
+                    if isinstance(timestamp, str):
+                        from dateutil import parser
+                        timestamp = parser.parse(timestamp)
+                    
                     date_key = timestamp.strftime('%Y-%m-%d')
                     user_stats[user_id]['activeDays'].add(date_key)
                     
                     # Update last seen
-                    if not user_stats[user_id]['lastSeen'] or timestamp > user_stats[user_id]['lastSeen']:
+                    if user_stats[user_id]['lastSeen'] is None or timestamp > user_stats[user_id]['lastSeen']:
                         user_stats[user_id]['lastSeen'] = timestamp
         except Exception as e:
             print(f"Error querying comments: {e}")

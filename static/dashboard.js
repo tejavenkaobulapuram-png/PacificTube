@@ -287,24 +287,24 @@ async function loadActiveUsers(period) {
                 <div class="top-user-email">${escapeHtml(user.userEmail || user.userName)}</div>
                 <div class="top-user-stats">
                     <div class="top-stat-item">
-                        <div class="top-stat-icon">📆</div>
-                        <div class="top-stat-label">ACTIVE DAYS</div>
-                        <div class="top-stat-value">${formatNumber(user.activeDays || 0)}</div>
+                        <div class="top-stat-icon">�</div>
+                        <div class="top-stat-label">LOGINS</div>
+                        <div class="top-stat-value">${formatNumber(user.logins || 0)}</div>
                     </div>
                     <div class="top-stat-item">
-                        <div class="top-stat-icon">❓</div>
-                        <div class="top-stat-label">QUERIES</div>
-                        <div class="top-stat-value">${formatNumber(user.searches || 0)}</div>
-                    </div>
-                    <div class="top-stat-item">
-                        <div class="top-stat-icon">⚠️</div>
-                        <div class="top-stat-label">RISK TABLES</div>
+                        <div class="top-stat-icon">📺</div>
+                        <div class="top-stat-label">VIDEO VIEWS</div>
                         <div class="top-stat-value">${formatNumber(user.videoViews || 0)}</div>
                     </div>
                     <div class="top-stat-item">
-                        <div class="top-stat-icon">📥</div>
-                        <div class="top-stat-label">DOWNLOADS</div>
-                        <div class="top-stat-value">${formatNumber(user.downloads || 0)}</div>
+                        <div class="top-stat-icon">🔍</div>
+                        <div class="top-stat-label">SEARCHES</div>
+                        <div class="top-stat-value">${formatNumber(user.searches || 0)}</div>
+                    </div>
+                    <div class="top-stat-item">
+                        <div class="top-stat-icon">💬</div>
+                        <div class="top-stat-label">COMMENTS</div>
+                        <div class="top-stat-value">${formatNumber(user.comments || 0)}</div>
                     </div>
                 </div>
                 <div class="top-user-last-seen">
@@ -329,21 +329,21 @@ async function loadActiveUsers(period) {
                 <td><strong>${formatNumber(totalActivities)}</strong></td>
                 <td>
                     <div class="activity-breakdown">
-                        <span class="activity-badge">
-                            <span class="icon">📆</span>
-                            <span class="count">${formatNumber(user.activeDays || 0)}</span>
+                        <span class="activity-badge" title="Logins">
+                            <span class="icon">🔐</span>
+                            <span class="count">${formatNumber(user.logins || 0)}</span>
                         </span>
-                        <span class="activity-badge">
-                            <span class="icon">⚠️</span>
+                        <span class="activity-badge" title="Video Views">
+                            <span class="icon">📺</span>
                             <span class="count">${formatNumber(user.videoViews || 0)}</span>
                         </span>
-                        <span class="activity-badge">
-                            <span class="icon">📥</span>
-                            <span class="count">${formatNumber(user.downloads || 0)}</span>
-                        </span>
-                        <span class="activity-badge">
-                            <span class="icon">❓</span>
+                        <span class="activity-badge" title="Searches">
+                            <span class="icon">🔍</span>
                             <span class="count">${formatNumber(user.searches || 0)}</span>
+                        </span>
+                        <span class="activity-badge" title="Comments">
+                            <span class="icon">💬</span>
+                            <span class="count">${formatNumber(user.comments || 0)}</span>
                         </span>
                     </div>
                 </td>

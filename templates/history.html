@@ -503,13 +503,13 @@
 
         function groupByDate(history) {
             const groups = {};
-            const now = new Date();
             
-            // Set time to midnight for accurate day comparison
-            now.setHours(0, 0, 0, 0);
+            // Get current local date at midnight
+            const now = new Date();
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
             history.forEach(item => {
-                // Parse watchedAt properly - handle ISO datetime
+                // Parse watchedAt - this will convert UTC to local time
                 let watchedDate = new Date(item.watchedAt);
                 
                 // Validate date
@@ -518,21 +518,33 @@
                     watchedDate = new Date(); // Fallback to now
                 }
                 
-                // Set to midnight for comparison
-                const watchedDateMidnight = new Date(watchedDate);
-                watchedDateMidnight.setHours(0, 0, 0, 0);
+                // Create a date at midnight in local timezone for this watched date
+                const watchedMidnight = new Date(
+                    watchedDate.getFullYear(), 
+                    watchedDate.getMonth(), 
+                    watchedDate.getDate(), 
+                    0, 0, 0, 0
+                );
                 
-                const diffMs = now - watchedDateMidnight;
-                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                // Calculate difference in days
+                const diffMs = todayMidnight.getTime() - watchedMidnight.getTime();
+                const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
                 let label;
                 if (diffDays === 0) {
                     label = '今日';
                 } else if (diffDays === 1) {
                     label = '昨日';
-                } else if (diffDays < 7) {
+                } else if (diffDays > 1 && diffDays < 7) {
                     label = `${diffDays}日前`;
+                } else if (diffDays >= 7) {
+                    label = watchedDate.toLocaleDateString('ja-JP', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
                 } else {
+                    // Negative diff (future date) - shouldn't happen but handle it
                     label = watchedDate.toLocaleDateString('ja-JP', { 
                         year: 'numeric', 
                         month: 'long', 
