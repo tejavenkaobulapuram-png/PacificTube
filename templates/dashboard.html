@@ -119,9 +119,32 @@
 
         <!-- Active Users Section -->
         <div class="active-users-section">
-            <h2>アクティブユーザー</h2>
-            <div class="users-grid" id="usersGrid">
-                <!-- User cards will be populated by JavaScript -->
+            <h2>👥 Top Active Users</h2>
+            <div class="top-users-grid" id="topUsersGrid">
+                <!-- Top user cards will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- All Users Section -->
+        <div class="all-users-section">
+            <h2>📋 All Users</h2>
+            <div class="search-box">
+                <input type="text" id="userSearchInput" placeholder="🔍 Search users by email..." />
+            </div>
+            <div class="users-table-container">
+                <table class="users-table" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Total Activities</th>
+                            <th>Activity Breakdown</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
             </div>
         </div>
 

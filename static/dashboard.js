@@ -241,42 +241,108 @@ async function loadActiveUsers(period) {
     const response = await fetch(`/api/dashboard/active-users/${period}`);
     const data = await response.json();
     
-    const usersGrid = document.getElementById('usersGrid');
-    usersGrid.innerHTML = '';
+    // Populate Top Active Users (Top 8)
+    const topUsersGrid = document.getElementById('topUsersGrid');
+    topUsersGrid.innerHTML = '';
     
     if (data.length === 0) {
-        usersGrid.innerHTML = '<p style="color: #718096; text-align: center; padding: 40px;">データがありません</p>';
-        return;
+        topUsersGrid.innerHTML = '<p style="color: #718096; text-align: center; padding: 40px;">データがありません</p>';
+    } else {
+        const topUsers = data.slice(0, 8); // Show top 8 users
+        topUsers.forEach((user, index) => {
+            const rank = index + 1;
+            const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
+            
+            const userCard = document.createElement('div');
+            userCard.className = 'top-user-card';
+            userCard.innerHTML = `
+                <div class="rank-badge ${rankClass}">#${rank}</div>
+                <div class="top-user-email">${escapeHtml(user.userEmail || user.userName)}</div>
+                <div class="top-user-stats">
+                    <div class="top-stat-item">
+                        <div class="top-stat-icon">📆</div>
+                        <div class="top-stat-label">ACTIVE DAYS</div>
+                        <div class="top-stat-value">${formatNumber(user.activeDays || 0)}</div>
+                    </div>
+                    <div class="top-stat-item">
+                        <div class="top-stat-icon">❓</div>
+                        <div class="top-stat-label">QUERIES</div>
+                        <div class="top-stat-value">${formatNumber(user.searches || 0)}</div>
+                    </div>
+                    <div class="top-stat-item">
+                        <div class="top-stat-icon">⚠️</div>
+                        <div class="top-stat-label">RISK TABLES</div>
+                        <div class="top-stat-value">${formatNumber(user.videoViews || 0)}</div>
+                    </div>
+                    <div class="top-stat-item">
+                        <div class="top-stat-icon">📥</div>
+                        <div class="top-stat-label">DOWNLOADS</div>
+                        <div class="top-stat-value">${formatNumber(user.downloads || 0)}</div>
+                    </div>
+                </div>
+                <div class="top-user-last-seen">
+                    ⏰ Last seen: ${user.lastSeen || 'Unknown'}
+                </div>
+            `;
+            topUsersGrid.appendChild(userCard);
+        });
     }
     
-    data.forEach(user => {
-        const userCard = document.createElement('div');
-        userCard.className = 'user-card';
-        userCard.innerHTML = `
-            <div class="user-name">
-                👤 ${escapeHtml(user.userName)}
-            </div>
-            <div class="user-stats">
-                <div class="stat-item">
-                    <span class="stat-label">ログイン</span>
-                    <span class="stat-value">${formatNumber(user.logins)}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">動画視聴</span>
-                    <span class="stat-value">${formatNumber(user.videoViews)}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">検索</span>
-                    <span class="stat-value">${formatNumber(user.searches)}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">コメント</span>
-                    <span class="stat-value">${formatNumber(user.comments)}</span>
-                </div>
-            </div>
-        `;
-        usersGrid.appendChild(userCard);
-    });
+    // Populate All Users Table
+    const usersTableBody = document.getElementById('usersTableBody');
+    usersTableBody.innerHTML = '';
+    
+    if (data.length > 0) {
+        data.forEach(user => {
+            const totalActivities = (user.logins || 0) + (user.videoViews || 0) + (user.searches || 0) + (user.comments || 0);
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="user-email-cell">${escapeHtml(user.userEmail || user.userName)}</td>
+                <td><strong>${formatNumber(totalActivities)}</strong></td>
+                <td>
+                    <div class="activity-breakdown">
+                        <span class="activity-badge">
+                            <span class="icon">📆</span>
+                            <span class="count">${formatNumber(user.activeDays || 0)}</span>
+                        </span>
+                        <span class="activity-badge">
+                            <span class="icon">⚠️</span>
+                            <span class="count">${formatNumber(user.videoViews || 0)}</span>
+                        </span>
+                        <span class="activity-badge">
+                            <span class="icon">📥</span>
+                            <span class="count">${formatNumber(user.downloads || 0)}</span>
+                        </span>
+                        <span class="activity-badge">
+                            <span class="icon">❓</span>
+                            <span class="count">${formatNumber(user.searches || 0)}</span>
+                        </span>
+                    </div>
+                </td>
+                <td class="last-seen-cell">${user.lastSeen || 'Unknown'}</td>
+            `;
+            usersTableBody.appendChild(row);
+        });
+    }
+    
+    // Add search functionality
+    const searchInput = document.getElementById('userSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = usersTableBody.querySelectorAll('tr');
+            
+            rows.forEach(row => {
+                const email = row.querySelector('.user-email-cell').textContent.toLowerCase();
+                if (email.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
 }
 
 // Export dashboard data

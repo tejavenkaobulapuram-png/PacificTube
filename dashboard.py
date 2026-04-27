@@ -349,7 +349,7 @@ def get_active_users(period):
     """
     from azure.data.tables import TableServiceClient
     from telemetry import TABLE_NAMES
-    from collections import defaultdict
+    from collections import defaultdict, set as set_type
     
     valid_periods = {'7d': 7, '30d': 30, '90d': 90}
     days = valid_periods.get(period, 7)
@@ -363,9 +363,20 @@ def get_active_users(period):
             return jsonify([])
         
         table_service = TableServiceClient.from_connection_string(storage_connection)
-        user_stats = defaultdict(lambda: {'userName': 'Anonymous', 'logins': 0, 'videoViews': 0, 'searches': 0, 'comments': 0, 'totalEvents': 0})
+        user_stats = defaultdict(lambda: {
+            'userName': 'Anonymous', 
+            'userEmail': '', 
+            'logins': 0, 
+            'videoViews': 0, 
+            'searches': 0, 
+            'comments': 0, 
+            'downloads': 0,
+            'totalEvents': 0,
+            'activeDays': set(),
+            'lastSeen': None
+        })
         
-        # Count logins
+        # Count logins and capture email
         try:
             session_table = table_service.get_table_client(TABLE_NAMES['user_sessions'])
             filter_query = f"Timestamp ge datetime'{start_time.isoformat()}' and EventType eq 'Login'"
@@ -373,8 +384,19 @@ def get_active_users(period):
             for entity in entities:
                 user_id = entity.get('UserId', 'unknown')
                 user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
+                user_stats[user_id]['userEmail'] = entity.get('UserEmail', '')
                 user_stats[user_id]['logins'] += 1
                 user_stats[user_id]['totalEvents'] += 1
+                
+                # Track active days
+                timestamp = entity.get('Timestamp')
+                if timestamp:
+                    date_key = timestamp.strftime('%Y-%m-%d')
+                    user_stats[user_id]['activeDays'].add(date_key)
+                    
+                    # Update last seen
+                    if not user_stats[user_id]['lastSeen'] or timestamp > user_stats[user_id]['lastSeen']:
+                        user_stats[user_id]['lastSeen'] = timestamp
         except Exception as e:
             print(f"Error querying logins: {e}")
         
@@ -388,6 +410,16 @@ def get_active_users(period):
                 user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
                 user_stats[user_id]['videoViews'] += 1
                 user_stats[user_id]['totalEvents'] += 1
+                
+                # Track active days
+                timestamp = entity.get('Timestamp') or entity.get('WatchedAt')
+                if timestamp:
+                    date_key = timestamp.strftime('%Y-%m-%d')
+                    user_stats[user_id]['activeDays'].add(date_key)
+                    
+                    # Update last seen
+                    if not user_stats[user_id]['lastSeen'] or timestamp > user_stats[user_id]['lastSeen']:
+                        user_stats[user_id]['lastSeen'] = timestamp
         except Exception as e:
             print(f"Error querying video views: {e}")
         
@@ -401,6 +433,16 @@ def get_active_users(period):
                 user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
                 user_stats[user_id]['searches'] += 1
                 user_stats[user_id]['totalEvents'] += 1
+                
+                # Track active days
+                timestamp = entity.get('Timestamp')
+                if timestamp:
+                    date_key = timestamp.strftime('%Y-%m-%d')
+                    user_stats[user_id]['activeDays'].add(date_key)
+                    
+                    # Update last seen
+                    if not user_stats[user_id]['lastSeen'] or timestamp > user_stats[user_id]['lastSeen']:
+                        user_stats[user_id]['lastSeen'] = timestamp
         except Exception as e:
             print(f"Error querying searches: {e}")
         
@@ -414,28 +456,46 @@ def get_active_users(period):
                 user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
                 user_stats[user_id]['comments'] += 1
                 user_stats[user_id]['totalEvents'] += 1
+                
+                # Track active days
+                timestamp = entity.get('Timestamp')
+                if timestamp:
+                    date_key = timestamp.strftime('%Y-%m-%d')
+                    user_stats[user_id]['activeDays'].add(date_key)
+                    
+                    # Update last seen
+                    if not user_stats[user_id]['lastSeen'] or timestamp > user_stats[user_id]['lastSeen']:
+                        user_stats[user_id]['lastSeen'] = timestamp
         except Exception as e:
             print(f"Error querying comments: {e}")
         
         # Convert to list
         data = []
         for user_id, stats in user_stats.items():
+            last_seen_str = stats['lastSeen'].strftime('%Y-%m-%d %H:%M:%S') if stats['lastSeen'] else 'Unknown'
+            
             data.append({
                 'userId': user_id,
                 'userName': stats['userName'],
+                'userEmail': stats['userEmail'] or stats['userName'],
                 'logins': stats['logins'],
                 'videoViews': stats['videoViews'],
                 'searches': stats['searches'],
                 'comments': stats['comments'],
-                'totalEvents': stats['totalEvents']
+                'downloads': stats['downloads'],
+                'activeDays': len(stats['activeDays']),
+                'totalEvents': stats['totalEvents'],
+                'lastSeen': last_seen_str
             })
         
         # Sort by total events
         data.sort(key=lambda x: x['totalEvents'], reverse=True)
-        return jsonify(data[:20])  # Top 20 users
+        return jsonify(data)  # Return all users (frontend will slice for top users)
         
     except Exception as e:
         print(f"Error fetching active users: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify([])
 
 
