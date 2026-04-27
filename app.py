@@ -902,9 +902,14 @@ def increment_view(video_id):
             'views': new_count
         })
     except Exception as e:
+        import traceback
+        error_msg = str(e)
+        error_trace = traceback.format_exc()
+        print(f"❌ ERROR in /api/view: {error_msg}")
+        print(f"Traceback:\n{error_trace}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': error_msg
         }), 500
 
 
@@ -1353,9 +1358,9 @@ def get_viewing_history():
         # Query Table Storage
         watch_table = table_service.get_table_client(TABLE_NAMES['watch_history'])
         
-        # Query watch history for this user
-        # Use Timestamp in filter (always exists), but display WatchedAt (custom field)
-        filter_query = f"PartitionKey eq '{user_id}' and Timestamp ge datetime'{start_time.isoformat()}'"
+        # Query watch history for this user (YouTube-style: filter by original watch date, not last update)
+        # Note: We can't filter by WatchedAt in query (not indexed), so query all and filter in Python
+        filter_query = f"PartitionKey eq '{user_id}'"
         entities = watch_table.query_entities(filter_query)
         
         history = []
@@ -1363,12 +1368,30 @@ def get_viewing_history():
             video_name = entity.get('VideoName', 'Unknown Video')
             video_id = entity.get('VideoId', '') or entity.get('VideoPath', '')
             
+            # Get timestamp - prefer WatchedAt (custom), fallback to Timestamp (system)
+            watched_at = entity.get('WatchedAt') or entity.get('Timestamp')
+            if not watched_at:
+                continue  # Skip if no timestamp
+            
+            # Filter by original watch date (like YouTube)
+            if days != 'all':
+                # WatchedAt is already a datetime object from Table Storage
+                # Make sure it's timezone-aware for comparison
+                if watched_at.tzinfo is None:
+                    watched_at = watched_at.replace(tzinfo=timezone.utc)
+                
+                # Skip if outside date range
+                if watched_at < start_time:
+                    continue
+            
             # Apply search filter if provided
             if search_query and search_query not in video_name.lower():
                 continue
             
-            # Get timestamp - prefer WatchedAt (custom), fallback to Timestamp (system)
-            watched_at = entity.get('WatchedAt') or entity.get('Timestamp')
+            # Make timezone-aware if needed
+            if watched_at.tzinfo is None:
+                watched_at = watched_at.replace(tzinfo=timezone.utc)
+            
             watched_at_str = watched_at.isoformat() if watched_at else datetime.now(timezone.utc).isoformat()
             
             history_item = {

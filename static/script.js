@@ -601,8 +601,18 @@ async function openModal(video) {
         dislikeBtn.style.opacity = '';
     }
 
-    // Note: View count tracking happens when video is closed (to capture actual watch duration)
-    // incrementViewCount will be called in closeVideoPlayer() with real duration data
+    // Note: View count tracking happens periodically while playing (every 10 seconds)
+    // and also when video is closed (to capture final watch duration)
+    
+    // Track initial video view when playback actually starts
+    player.addEventListener('playing', function initialViewTrack() {
+        // Track as soon as video starts playing (even if currentTime is 0)
+        if (player.duration > 0) {
+            const videoName = window.currentVideoName || 'Unknown';
+            const currentTime = Math.max(player.currentTime, 0.1); // Use at least 0.1 to indicate video was opened
+            incrementViewCount(window.currentVideoId, videoName, currentTime, player.duration);
+        }
+    }, { once: true });
 
     // Load engagement data (likes, dislikes, comments)
     loadEngagement(video.id);
@@ -796,7 +806,7 @@ function startWatchPositionTracking(videoId, player) {
         clearInterval(watchPositionInterval);
     }
     
-    // Save position every 10 seconds
+    // Save position AND watch duration every 10 seconds
     watchPositionInterval = setInterval(() => {
         if (!player.paused && player.currentTime > 0) {
             const position = player.currentTime;
@@ -806,6 +816,12 @@ function startWatchPositionTracking(videoId, player) {
             // Don't save if near the beginning (< 5 sec) or near the end (> 95%)
             if (position > 5 && percentage < 95) {
                 saveWatchPosition(videoId, position, duration);
+            }
+            
+            // Also update watch history with current duration (so history page shows real-time data)
+            if (duration > 0) {
+                const videoName = window.currentVideoName || 'Unknown';
+                incrementViewCount(videoId, videoName, position, duration);
             }
         }
     }, 10000); // Every 10 seconds
@@ -2314,3 +2330,33 @@ function updateRelatedVideoActiveState(activeVideoId) {
 }
 
 // Modal search functions removed - using main header search only (YouTube-style)
+
+// =============================================================================
+// TRACK WATCH DURATION WHEN USER NAVIGATES AWAY OR CLOSES PAGE
+// =============================================================================
+window.addEventListener('beforeunload', function(event) {
+    const player = document.getElementById('videoPlayer');
+    
+    // If a video is currently playing, save final watch duration
+    if (window.currentVideoId && player && player.currentTime > 0 && player.duration > 0) {
+        const durationWatched = player.currentTime;
+        const videoDuration = player.duration;
+        const videoName = window.currentVideoName || 'Unknown';
+        
+        // Use sendBeacon for reliable delivery even during page unload
+        // (fetch requests may be cancelled during unload)
+        const data = JSON.stringify({
+            name: videoName,
+            duration_watched: Math.round(durationWatched),
+            video_duration: Math.round(videoDuration)
+        });
+        
+        const videoId = window.currentVideoId;
+        const url = `/api/view/${encodeURIComponent(videoId)}`;
+        
+        // Try sendBeacon first (most reliable), fallback to sync fetch
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(url, new Blob([data], { type: 'application/json' }));
+        }
+    }
+});

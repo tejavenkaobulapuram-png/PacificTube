@@ -118,33 +118,61 @@ class TelemetryTracker:
             'userAgent': user_agent
         }
         
+        # Try to log to Application Insights (optional - don't crash if it fails)
         if insights_connection:
-            logger.info('VideoView', extra={'custom_dimensions': properties})
+            try:
+                logger.info('VideoView', extra={'custom_dimensions': properties})
+            except Exception as insights_error:
+                # Silent fail - Application Insights is optional
+                print(f"Warning: Application Insights logging failed: {insights_error}")
         
         # Write to Table Storage (permanent backup)
+        # YouTube-style: Same video on same day = same history entry (update duration, preserve original watch time)
         if table_service:
             try:
+                import hashlib
                 table_client = table_service.get_table_client(TABLE_NAMES['watch_history'])
-                watch_time = datetime.now(timezone.utc)
+                current_time = datetime.now(timezone.utc)
+                
+                # RowKey: videoId + date (YYYYMMDD) - so same video on same day updates the same row
+                # This prevents creating duplicate entries every 10 seconds
+                date_str = current_time.strftime('%Y%m%d')
+                # Use hash of video_path to keep RowKey short (max 1KB)
+                video_hash = hashlib.md5(video_path.encode()).hexdigest()[:16]
+                row_key = f"{video_hash}_{date_str}"
+                
+                # Try to get existing entity first (to preserve original WatchedAt)
+                original_watch_time = current_time
+                try:
+                    existing = table_client.get_entity(partition_key=user_id, row_key=row_key)
+                    original_watch_time = existing.get('WatchedAt', current_time)
+                except Exception as get_error:
+                    # Entity doesn't exist yet - use current time as original watch time
+                    pass
+                
                 entity = {
                     'PartitionKey': user_id,
-                    'RowKey': str(uuid.uuid4()),
-                    'WatchedAt': watch_time,  # Custom timestamp field
+                    'RowKey': row_key,
+                    'WatchedAt': original_watch_time,  # PRESERVE original watch time (like YouTube)
                     'UserId': user_id,
                     'UserName': user_name,
                     'VideoPath': video_path,
                     'VideoId': video_path,  # Add VideoId for history queries
                     'VideoName': video_name,
                     'Folder': folder,
-                    'DurationWatched': duration_watched,
+                    'DurationWatched': duration_watched,  # UPDATE duration (latest value)
                     'VideoDuration': video_duration,
                     'CompletionRate': (duration_watched / video_duration * 100) if video_duration > 0 else 0,
                     'IpAddress': ip_address,
                     'UserAgent': user_agent
                 }
-                table_client.create_entity(entity)
+                
+                # Upsert (update if exists, create if not) - like YouTube
+                table_client.upsert_entity(entity)
             except Exception as e:
+                import traceback
                 print(f"Error writing to Table Storage: {e}")
+                print(f"Traceback: {traceback.format_exc()}")
     
     @staticmethod
     def track_user_login(login_method='EntraID'):
@@ -161,7 +189,10 @@ class TelemetryTracker:
         }
         
         if insights_connection:
-            logger.info('UserLogin', extra={'custom_dimensions': properties})
+            try:
+                logger.info('UserLogin', extra={'custom_dimensions': properties})
+            except Exception:
+                pass  # Silent fail
         
         if table_service:
             try:
@@ -193,7 +224,10 @@ class TelemetryTracker:
         }
         
         if insights_connection:
-            logger.info('UserLogout', extra={'custom_dimensions': properties})
+            try:
+                logger.info('UserLogout', extra={'custom_dimensions': properties})
+            except Exception:
+                pass  # Silent fail
         
         if table_service:
             try:
@@ -225,7 +259,10 @@ class TelemetryTracker:
         }
         
         if insights_connection:
-            logger.info('Search', extra={'custom_dimensions': properties})
+            try:
+                logger.info('Search', extra={'custom_dimensions': properties})
+            except Exception:
+                pass  # Silent fail
         
         if table_service:
             try:
@@ -258,7 +295,10 @@ class TelemetryTracker:
         }
         
         if insights_connection:
-            logger.info('Comment', extra={'custom_dimensions': properties})
+            try:
+                logger.info('Comment', extra={'custom_dimensions': properties})
+            except Exception:
+                pass  # Silent fail
         
         if table_service:
             try:
@@ -291,7 +331,10 @@ class TelemetryTracker:
         }
         
         if insights_connection:
-            logger.info('Rating', extra={'custom_dimensions': properties})
+            try:
+                logger.info('Rating', extra={'custom_dimensions': properties})
+            except Exception:
+                pass  # Silent fail
         
         if table_service:
             try:
