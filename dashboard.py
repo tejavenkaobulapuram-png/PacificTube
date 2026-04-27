@@ -418,30 +418,40 @@ def get_active_users(period):
         # Count video views
         try:
             watch_table = table_service.get_table_client(TABLE_NAMES['watch_history'])
-            filter_query = f"Timestamp ge datetime'{start_time.isoformat()}'"
-            entities = watch_table.query_entities(filter_query)
+            # Query all watch history in the period (no timestamp filter since we use WatchedAt)
+            entities = list(watch_table.query_entities(""))
+            
             for entity in entities:
+                # Check if within time period using WatchedAt or Timestamp
+                watched_at = entity.get('WatchedAt') or entity.get('Timestamp')
+                if not watched_at:
+                    continue
+                
+                # Ensure timestamp is a datetime object
+                if isinstance(watched_at, str):
+                    from dateutil import parser
+                    watched_at = parser.parse(watched_at)
+                
+                # Skip if outside our time range
+                if watched_at < start_time:
+                    continue
+                
                 user_id = entity.get('UserId', 'unknown')
                 user_stats[user_id]['userName'] = entity.get('UserName', 'Anonymous')
                 user_stats[user_id]['videoViews'] += 1
                 user_stats[user_id]['totalEvents'] += 1
                 
                 # Track active days
-                timestamp = entity.get('Timestamp') or entity.get('WatchedAt')
-                if timestamp:
-                    # Ensure timestamp is a datetime object
-                    if isinstance(timestamp, str):
-                        from dateutil import parser
-                        timestamp = parser.parse(timestamp)
-                    
-                    date_key = timestamp.strftime('%Y-%m-%d')
-                    user_stats[user_id]['activeDays'].add(date_key)
-                    
-                    # Update last seen
-                    if user_stats[user_id]['lastSeen'] is None or timestamp > user_stats[user_id]['lastSeen']:
-                        user_stats[user_id]['lastSeen'] = timestamp
+                date_key = watched_at.strftime('%Y-%m-%d')
+                user_stats[user_id]['activeDays'].add(date_key)
+                
+                # Update last seen
+                if user_stats[user_id]['lastSeen'] is None or watched_at > user_stats[user_id]['lastSeen']:
+                    user_stats[user_id]['lastSeen'] = watched_at
         except Exception as e:
             print(f"Error querying video views: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Count searches
         try:
@@ -502,7 +512,57 @@ def get_active_users(period):
         # Convert to list
         data = []
         for user_id, stats in user_stats.items():
-            last_seen_str = stats['lastSeen'].strftime('%Y-%m-%d %H:%M:%S') if stats['lastSeen'] else 'Unknown'
+            # Get the actual last seen by querying most recent activity across all tables (without time filter)
+            last_seen_timestamp = None
+            
+            # Check user_sessions for latest login
+            try:
+                session_table = table_service.get_table_client(TABLE_NAMES['user_sessions'])
+                filter_query = f"PartitionKey eq '{user_id}'"
+                entities = list(session_table.query_entities(filter_query, select=['Timestamp']))
+                if entities:
+                    for entity in entities:
+                        ts = entity.get('Timestamp')
+                        if ts and (last_seen_timestamp is None or ts > last_seen_timestamp):
+                            last_seen_timestamp = ts
+            except:
+                pass
+            
+            # Check watch_history for latest video view
+            try:
+                watch_table = table_service.get_table_client(TABLE_NAMES['watch_history'])
+                filter_query = f"PartitionKey eq '{user_id}'"
+                entities = list(watch_table.query_entities(filter_query, select=['Timestamp', 'WatchedAt']))
+                if entities:
+                    for entity in entities:
+                        ts = entity.get('WatchedAt') or entity.get('Timestamp')
+                        if ts and (last_seen_timestamp is None or ts > last_seen_timestamp):
+                            last_seen_timestamp = ts
+            except:
+                pass
+            
+            # Check search_logs for latest search
+            try:
+                search_table = table_service.get_table_client(TABLE_NAMES['search_logs'])
+                filter_query = f"PartitionKey eq '{user_id}'"
+                entities = list(search_table.query_entities(filter_query, select=['Timestamp']))
+                if entities:
+                    for entity in entities:
+                        ts = entity.get('Timestamp')
+                        if ts and (last_seen_timestamp is None or ts > last_seen_timestamp):
+                            last_seen_timestamp = ts
+            except:
+                pass
+            
+            # Format lastSeen
+            if last_seen_timestamp:
+                if isinstance(last_seen_timestamp, str):
+                    from dateutil import parser
+                    last_seen_timestamp = parser.parse(last_seen_timestamp)
+                last_seen_str = last_seen_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                # Fallback to stats lastSeen if available
+                last_seen_str = stats['lastSeen'].strftime('%Y-%m-%d %H:%M:%S') if stats['lastSeen'] else 'Unknown'
             
             data.append({
                 'userId': user_id,
