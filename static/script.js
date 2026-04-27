@@ -601,8 +601,8 @@ async function openModal(video) {
         dislikeBtn.style.opacity = '';
     }
 
-    // Increment view count (initial tracking)
-    incrementViewCount(video.id, video.name, 0, 0);
+    // Note: View count tracking happens when video is closed (to capture actual watch duration)
+    // incrementViewCount will be called in closeVideoPlayer() with real duration data
 
     // Load engagement data (likes, dislikes, comments)
     loadEngagement(video.id);
@@ -2220,6 +2220,23 @@ function loadRelatedThumbnail(videoId, cardElement) {
 async function switchToVideo(video) {
     const player = document.getElementById('videoPlayer');
     
+    // Track watch duration of previous video before switching
+    if (window.currentVideoId && player && player.currentTime > 0 && player.duration > 0) {
+        const durationWatched = player.currentTime;
+        const videoDuration = player.duration;
+        const previousVideoName = window.currentVideoName || 'Unknown';
+        
+        // Save previous video's watch duration
+        incrementViewCount(window.currentVideoId, previousVideoName, durationWatched, videoDuration);
+        
+        // Save watch position
+        if (durationWatched > 5) {
+            saveWatchPosition(window.currentVideoId, durationWatched, videoDuration);
+        }
+        
+        serverLog('VIDEO_SWITCHED', `Saved watch time: ${Math.floor(durationWatched)}s / ${Math.floor(videoDuration)}s`, window.currentVideoId);
+    }
+    
     // Stop current video
     if (player) {
         player.pause();
@@ -2276,8 +2293,7 @@ async function switchToVideo(video) {
     if (likeBtn) likeBtn.classList.remove('active');
     if (dislikeBtn) dislikeBtn.classList.remove('active');
     
-    // Increment view count
-    incrementViewCount(video.id, video.name);
+    // Note: View count tracking happens when video is closed (to capture actual watch duration)
     
     // Reload engagement, subtitles, chapters, and related videos
     loadEngagement(video.id);
