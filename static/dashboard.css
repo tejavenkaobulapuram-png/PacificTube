@@ -656,7 +656,7 @@ body {
 
 .metric-label {
     font-size: 13px;
-    color: #718096;
+    color: white;
     margin-bottom: 4px;
     font-weight: 500;
 }
@@ -774,6 +774,7 @@ body {
 
 .stat-label {
     font-weight: 500;
+    color: white;
 }
 
 .stat-value {

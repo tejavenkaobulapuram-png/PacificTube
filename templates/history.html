@@ -384,9 +384,6 @@
                     <option value="90">📅 過去90日間</option>
                     <option value="all">📅 すべて</option>
                 </select>
-                <button class="clear-history-btn" id="clearHistoryBtn" onclick="confirmClearHistory()">
-                    🗑️ 履歴をクリア
-                </button>
             </div>
         </div>
 
@@ -597,11 +594,6 @@
                     <div class="history-watched-time">
                         📅 ${watchedTime}
                     </div>
-                    <div class="history-actions">
-                        <button class="action-btn" onclick="event.stopPropagation(); removeFromHistory('${item.videoId}', '${item.watchedAt}')">
-                            🗑️ 削除
-                        </button>
-                    </div>
                 </div>
             `;
 
@@ -611,20 +603,6 @@
         function playVideo(videoId, videoName) {
             // Redirect to home page and open the video
             window.location.href = `/?video=${encodeURIComponent(videoId)}`;
-        }
-
-        function removeFromHistory(videoId, watchedAt) {
-            if (confirm('この動画を履歴から削除しますか？')) {
-                // TODO: Implement remove from history API
-                alert('この機能は開発中です');
-            }
-        }
-
-        function confirmClearHistory() {
-            if (confirm('すべての視聴履歴を削除しますか？この操作は取り消せません。')) {
-                // TODO: Implement clear all history API
-                alert('この機能は開発中です');
-            }
         }
 
         function escapeHtml(text) {
