@@ -241,6 +241,12 @@ async function loadActiveUsers(period) {
     const response = await fetch(`/api/dashboard/active-users/${period}`);
     const data = await response.json();
     
+    // Update total active users count
+    const totalCountElement = document.getElementById('totalActiveUsers');
+    if (totalCountElement) {
+        totalCountElement.textContent = `${data.length} Total`;
+    }
+    
     // Populate Top Active Users (Top 8)
     const topUsersGrid = document.getElementById('topUsersGrid');
     topUsersGrid.innerHTML = '';

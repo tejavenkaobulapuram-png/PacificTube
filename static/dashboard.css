@@ -846,6 +846,49 @@ body {
     }
 }
 
+/* Active Users Header Banner */
+.active-users-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px 30px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.active-users-header h2 {
+    color: white;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.total-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 18px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+.section-divider {
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #667eea 50%, transparent 100%);
+    margin: 30px 0 20px 0;
+}
+
+.top-users-title {
+    color: #667eea;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-left: 10px;
+}
+
 /* Top Active Users Section */
 .top-users-grid {
     display: grid;
