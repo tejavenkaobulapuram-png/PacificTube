@@ -5,6 +5,32 @@ let trendChart = null;
 let folderChart = null;
 let videoChart = null;
 
+// Helper function to handle API responses with proper error checking
+async function fetchDashboardAPI(url) {
+    const response = await fetch(url);
+    
+    // Check if response is OK
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            // Authentication failed - redirect to home
+            window.location.href = '/';
+            throw new Error('認証が必要です。ログインしてください。');
+        }
+        throw new Error(`サーバーエラー: ${response.status}`);
+    }
+    
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        // If we get HTML instead of JSON, it means we were redirected (auth failed)
+        console.error('Expected JSON but received:', contentType);
+        window.location.href = '/';
+        throw new Error('認証が必要です。ログインしてください。');
+    }
+    
+    return await response.json();
+}
+
 // Change time period
 function changePeriod(period) {
     window.location.href = `/dashboard/${period}`;
@@ -38,8 +64,7 @@ async function loadDashboardData(period) {
 
 // Load metrics cards
 async function loadMetrics(period) {
-    const response = await fetch(`/api/dashboard/metrics/${period}`);
-    const data = await response.json();
+    const data = await fetchDashboardAPI(`/api/dashboard/metrics/${period}`);
     
     document.getElementById('totalEvents').textContent = formatNumber(data.totalEvents);
     document.getElementById('userLogins').textContent = formatNumber(data.userLogins);
@@ -58,8 +83,7 @@ async function loadMetrics(period) {
 
 // Load trend line chart
 async function loadTrendChart(period) {
-    const response = await fetch(`/api/dashboard/trend/${period}`);
-    const data = await response.json();
+    const data = await fetchDashboardAPI(`/api/dashboard/trend/${period}`);
     
     const ctx = document.getElementById('trendChart').getContext('2d');
     
@@ -114,8 +138,7 @@ async function loadTrendChart(period) {
 
 // Load folder distribution pie chart
 async function loadFolderChart(period) {
-    const response = await fetch(`/api/dashboard/folders/${period}`);
-    const data = await response.json();
+    const data = await fetchDashboardAPI(`/api/dashboard/folders/${period}`);
     
     const ctx = document.getElementById('folderPieChart').getContext('2d');
     
@@ -176,8 +199,7 @@ async function loadFolderChart(period) {
 
 // Load top videos pie chart
 async function loadVideoChart(period) {
-    const response = await fetch(`/api/dashboard/videos/${period}`);
-    const data = await response.json();
+    const data = await fetchDashboardAPI(`/api/dashboard/videos/${period}`);
     
     const ctx = document.getElementById('videoPieChart').getContext('2d');
     
@@ -238,8 +260,7 @@ async function loadVideoChart(period) {
 
 // Load active users grid
 async function loadActiveUsers(period) {
-    const response = await fetch(`/api/dashboard/active-users/${period}`);
-    const data = await response.json();
+    const data = await fetchDashboardAPI(`/api/dashboard/active-users/${period}`);
     
     // Update total active users count
     const totalCountElement = document.getElementById('totalActiveUsers');
